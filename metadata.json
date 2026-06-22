@@ -1,0 +1,6 @@
+{
+  "name": "AgroSensiX",
+  "description": "Smart solar-powered precision irrigation and crop protection system featuring live farm command centers, interactive digital twin telemetry, and localized Gemini AI multilingual assistants.",
+  "requestFramePermissions": ["microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

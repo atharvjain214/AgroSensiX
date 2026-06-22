@@ -1,0 +1,162 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 1. Global Reset Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- Helper Functions ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isEmailVerified() {
+      return isSignedIn() && (request.auth.token.email_verified == true || request.auth.token.firebase.sign_in_provider == 'google.com');
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- ENTITY SCHEMAS & VALIDATION HELPERS ---
+
+    function isValidSector(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.name is string && data.name.size() <= 100
+        && data.cropType is string && data.cropType.size() <= 200
+        && data.plantHealthIndex is number && data.plantHealthIndex >= 0 && data.plantHealthIndex <= 100
+        && data.moistureThresholdMin is number && data.moistureThresholdMin >= 0 && data.moistureThresholdMin <= 100
+        && data.moistureThresholdMax is number && data.moistureThresholdMax >= 0 && data.moistureThresholdMax <= 100
+        && data.activeAlertsCount is number;
+    }
+
+    function isValidNode(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.name is string && data.name.size() <= 100
+        && data.status is string && (data.status == 'nominal' || data.status == 'degraded' || data.status == 'critical' || data.status == 'inactive')
+        && data.soilMoisture is number && data.soilMoisture >= 0 && data.soilMoisture <= 100
+        && data.temperature is number && data.temperature >= -50 && data.temperature <= 100
+        && data.humidity is number && data.humidity >= 0 && data.humidity <= 100
+        && data.solarDose is number && data.solarDose >= 0 && data.solarDose <= 5000
+        && data.lastUpdated is string && data.lastUpdated.size() <= 128;
+    }
+
+    function isValidBattery(data) {
+      return data.chargePercent is number && data.chargePercent >= 0 && data.chargePercent <= 100
+        && data.voltage is number && data.voltage >= 0 && data.voltage <= 1000
+        && data.healthPercent is number && data.healthPercent >= 0 && data.healthPercent <= 100
+        && data.solarInputKw is number && data.solarInputKw >= 0
+        && data.gridPowerUsedKw is number && data.gridPowerUsedKw >= 0
+        && data.loadKw is number && data.loadKw >= 0
+        && data.chargingState is string && (data.chargingState == 'harvesting' || data.chargingState == 'discharging' || data.chargingState == 'idle' || data.chargingState == 'trickle');
+    }
+
+    function isValidPump(data) {
+      return data.status is string && (data.status == 'active' || data.status == 'standby' || data.status == 'fault' || data.status == 'shutdown')
+        && data.flowRateLpm is number && data.flowRateLpm >= 0
+        && data.pressureBar is number && data.pressureBar >= 0
+        && data.totalLitresDispensed is number && data.totalLitresDispensed >= 0
+        && data.reservoirLevelPercent is number && data.reservoirLevelPercent >= 0 && data.reservoirLevelPercent <= 100
+        && data.currentMode is string && (data.currentMode == 'eco' || data.currentMode == 'intensive' || data.currentMode == 'biological' || data.currentMode == 'off')
+        && data.pulsingTimerSec is number && data.pulsingTimerSec >= 0;
+    }
+
+    function isValidIrrigationLog(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.timestamp is string && data.timestamp.size() <= 128
+        && data.sectorId is string && data.sectorId.size() <= 128
+        && data.sectorName is string && data.sectorName.size() <= 100
+        && data.durationSec is number && data.durationSec >= 0
+        && data.litresDispensed is number && data.litresDispensed >= 0
+        && data.mode is string && data.mode.size() <= 50
+        && data.syncStatus is string && (data.syncStatus == 'synced' || data.syncStatus == 'pending');
+    }
+
+    function isValidTankLog(data) {
+      return data.id is string && data.id.size() <= 128
+        && data.timestamp is string && data.timestamp.size() <= 128
+        && data.prevLevelPercent is number && data.prevLevelPercent >= 0 && data.prevLevelPercent <= 100
+        && data.newLevelPercent is number && data.newLevelPercent >= 0 && data.newLevelPercent <= 100
+        && data.refillVolumeLitres is number && data.refillVolumeLitres >= 0
+        && data.actionType is string && (data.actionType == 'refill' || data.actionType == 'depletion')
+        && data.syncStatus is string && (data.syncStatus == 'synced' || data.syncStatus == 'pending');
+    }
+
+    // --- Collection Routes ---
+
+    // 2. User Profiles Public Collection
+    match /users/{userId}/public/profile {
+      allow read: if isSignedIn();
+      allow create, update: if isOwner(userId) && incoming().displayName is string && incoming().displayName.size() <= 100;
+      allow delete: if isOwner(userId);
+    }
+
+    // 3. User Private PII Collection
+    match /users/{userId}/private/info {
+      allow read: if isOwner(userId);
+      allow create, update: if isOwner(userId) && incoming().email is string && incoming().email.size() <= 200 && incoming().role is string && incoming().role.size() <= 50;
+      allow delete: if isOwner(userId);
+    }
+
+    // 4. Sector Definitions
+    match /sectors/{sectorId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && isValidId(sectorId) && isValidSector(incoming());
+      allow update: if isSignedIn() && isValidSector(incoming()) && (
+        // Action: Adjust thresholds or health metrics
+        incoming().diff(existing()).affectedKeys().hasOnly(['plantHealthIndex', 'moistureThresholdMin', 'moistureThresholdMax', 'activeAlertsCount'])
+        || incoming().diff(existing()).affectedKeys().hasOnly(['activeAlertsCount'])
+      );
+      allow delete: if isSignedIn(); // Allow managing configurations
+    }
+
+    // 5. Sector Sub-Micro-Nodes
+    match /sectors/{sectorId}/nodes/{nodeId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(nodeId) && isValidNode(incoming());
+      allow delete: if isSignedIn();
+    }
+
+    // 6. Global Solar Battery Telemetry
+    match /telemetry/battery {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidBattery(incoming());
+      allow delete: if isSignedIn();
+    }
+
+    // 7. Global Water Pump Irrigation Telemetry
+    match /telemetry/pump {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidPump(incoming());
+      allow delete: if isSignedIn();
+    }
+
+    // 8. Irrigation History Logs Collection
+    match /irrigation_logs/{logId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(logId) && isValidIrrigationLog(incoming());
+      allow delete: if isSignedIn();
+    }
+
+    // 9. Water Reservoir Tank Logs Collection
+    match /tank_logs/{logId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn() && isValidId(logId) && isValidTankLog(incoming());
+      allow delete: if isSignedIn();
+    }
+  }
+}

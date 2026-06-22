@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AgroSensiX</title>
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="theme-color" content="#10b981" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="description" content="Fully Offline-Capable Smart Farming and Biological Intelligence Monitor" />
+    <script>
+      // Early silence script to intercept and prevent benign HMR/WebSocket proxy connection closed errors from showing as noisy UI alerts or crashes
+      (function() {
+        const isWsIssue = (msg) => {
+          if (!msg) return false;
+          const s = String(msg).toLowerCase();
+          return s.includes("websocket") || 
+                 s.includes("ws://") || 
+                 s.includes("wss://") || 
+                 s.includes("connection closed") || 
+                 s.includes("closed without opened") ||
+                 s.includes("hmr");
+        };
+
+        // 1. Intercept console.error to silence annoying HMR warning logs
+        const originalConsoleError = console.error;
+        console.error = function(...args) {
+          const joinedStr = args.map(arg => {
+            try { return typeof arg === 'object' ? JSON.stringify(arg) : String(arg); } 
+            catch(e) { return String(arg); }
+          }).join(" ");
+          
+          if (isWsIssue(joinedStr)) {
+            console.warn("[AgroSensiX HMR Intercept]: Downgraded websocket failure alert.", ...args);
+            return;
+          }
+          originalConsoleError.apply(console, args);
+        };
+
+        // 2. Prevent unhandled promise rejections for websocket connections
+        window.addEventListener("unhandledrejection", (event) => {
+          const reason = event.reason;
+          const msg = reason?.message || String(reason || "");
+          if (isWsIssue(msg)) {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+        }, { capture: true });
+
+        // 3. Prevent standard errors
+        window.addEventListener("error", (event) => {
+          const msg = event.message || "";
+          if (isWsIssue(msg)) {
+            event.preventDefault();
+            event.stopPropagation();
+          }
+        }, { capture: true });
+
+        // 4. Wrap WebSocket to swallow instances where connection drops immediately under nginx reverse proxy
+        if (typeof window !== "undefined" && window.WebSocket) {
+          const OriginalWebSocket = window.WebSocket;
+          function SafeWebSocket(url, protocols) {
+            try {
+              const ws = new OriginalWebSocket(url, protocols);
+              ws.addEventListener("error", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              });
+              ws.addEventListener("close", (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+              });
+              return ws;
+            } catch (err) {
+              console.warn("[AgroSensiX HMR Intercept]: Safely bypassed websocket instantiation:", err);
+              return {
+                addEventListener: () => {},
+                removeEventListener: () => {},
+                send: () => {},
+                close: () => {},
+                readyState: 3, // CLOSED
+              };
+            }
+          }
+          SafeWebSocket.prototype = OriginalWebSocket.prototype;
+          SafeWebSocket.CONNECTING = OriginalWebSocket.CONNECTING;
+          SafeWebSocket.OPEN = OriginalWebSocket.OPEN;
+          SafeWebSocket.CLOSING = OriginalWebSocket.CLOSING;
+          SafeWebSocket.CLOSED = OriginalWebSocket.CLOSED;
+          window.WebSocket = SafeWebSocket;
+        }
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+

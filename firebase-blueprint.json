@@ -1,0 +1,253 @@
+{
+  "entities": {
+    "UserProfilePublic": {
+      "title": "User Profile Public",
+      "description": "Public profile details for an authenticated agronomist.",
+      "type": "object",
+      "properties": {
+        "displayName": {
+          "type": "string",
+          "description": "The agronomist name"
+        }
+      },
+      "required": ["displayName"]
+    },
+    "UserProfilePrivate": {
+      "title": "User Profile Private Info",
+      "description": "Private profile information containing sensitive personal data.",
+      "type": "object",
+      "properties": {
+        "email": {
+          "type": "string",
+          "description": "The private email address of the agronomist"
+        },
+        "role": {
+          "type": "string",
+          "description": "System registry security clear level"
+        }
+      },
+      "required": ["email", "role"]
+    },
+    "Sector": {
+      "title": "Sector",
+      "description": "Crop sector definitions for botanical monitoring.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "cropType": {
+          "type": "string"
+        },
+        "plantHealthIndex": {
+          "type": "number"
+        },
+        "moistureThresholdMin": {
+          "type": "number"
+        },
+        "moistureThresholdMax": {
+          "type": "number"
+        },
+        "activeAlertsCount": {
+          "type": "number"
+        }
+      },
+      "required": ["id", "name", "cropType", "plantHealthIndex", "moistureThresholdMin", "moistureThresholdMax", "activeAlertsCount"]
+    },
+    "SensorNode": {
+      "title": "Sensor Node",
+      "description": "Soil and atmospheric readings from a micro-node hardware sensor.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["nominal", "degraded", "critical", "inactive"]
+        },
+        "soilMoisture": {
+          "type": "number"
+        },
+        "temperature": {
+          "type": "number"
+        },
+        "humidity": {
+          "type": "number"
+        },
+        "solarDose": {
+          "type": "number"
+        },
+        "lastUpdated": {
+          "type": "string"
+        }
+      },
+      "required": ["id", "name", "status", "soilMoisture", "temperature", "humidity", "solarDose", "lastUpdated"]
+    },
+    "BatteryTelemetry": {
+      "title": "Battery Telemetry",
+      "description": "Off-grid solar backplane and lithium storage battery readings.",
+      "type": "object",
+      "properties": {
+        "chargePercent": {
+          "type": "number"
+        },
+        "voltage": {
+          "type": "number"
+        },
+        "healthPercent": {
+          "type": "number"
+        },
+        "solarInputKw": {
+          "type": "number"
+        },
+        "gridPowerUsedKw": {
+          "type": "number"
+        },
+        "loadKw": {
+          "type": "number"
+        },
+        "chargingState": {
+          "type": "string",
+          "enum": ["harvesting", "discharging", "idle", "trickle"]
+        }
+      },
+      "required": ["chargePercent", "voltage", "healthPercent", "solarInputKw", "gridPowerUsedKw", "loadKw", "chargingState"]
+    },
+    "WaterPumpTelemetry": {
+      "title": "Water Pump Telemetry",
+      "description": "Hydraulic irrigation pumpset logs and dynamic variables.",
+      "type": "object",
+      "properties": {
+        "status": {
+          "type": "string",
+          "enum": ["active", "standby", "fault", "shutdown"]
+        },
+        "flowRateLpm": {
+          "type": "number"
+        },
+        "pressureBar": {
+          "type": "number"
+        },
+        "totalLitresDispensed": {
+          "type": "number"
+        },
+        "reservoirLevelPercent": {
+          "type": "number"
+        },
+        "currentMode": {
+          "type": "string",
+          "enum": ["eco", "intensive", "biological", "off"]
+        },
+        "pulsingTimerSec": {
+          "type": "number"
+        }
+      },
+      "required": ["status", "flowRateLpm", "pressureBar", "totalLitresDispensed", "reservoirLevelPercent", "currentMode", "pulsingTimerSec"]
+    },
+    "IrrigationHistoryLog": {
+      "title": "Irrigation History Log",
+      "description": "Historical record of water irrigation cycle event.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string"
+        },
+        "sectorId": {
+          "type": "string"
+        },
+        "sectorName": {
+          "type": "string"
+        },
+        "durationSec": {
+          "type": "number"
+        },
+        "litresDispensed": {
+          "type": "number"
+        },
+        "mode": {
+          "type": "string"
+        },
+        "syncStatus": {
+          "type": "string",
+          "enum": ["synced", "pending"]
+        }
+      },
+      "required": ["id", "timestamp", "sectorId", "sectorName", "durationSec", "litresDispensed", "mode", "syncStatus"]
+    },
+    "WaterTankHistoryLog": {
+      "title": "Water Tank History Log",
+      "description": "Historical record of water tank level changes.",
+      "type": "object",
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "timestamp": {
+          "type": "string"
+        },
+        "prevLevelPercent": {
+          "type": "number"
+        },
+        "newLevelPercent": {
+          "type": "number"
+        },
+        "refillVolumeLitres": {
+          "type": "number"
+        },
+        "actionType": {
+          "type": "string",
+          "enum": ["refill", "depletion"]
+        },
+        "syncStatus": {
+          "type": "string",
+          "enum": ["synced", "pending"]
+        }
+      },
+      "required": ["id", "timestamp", "prevLevelPercent", "newLevelPercent", "refillVolumeLitres", "actionType", "syncStatus"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}/public/profile": {
+      "schema": "UserProfilePublic",
+      "description": "Unrestricted display name of logged in agronomist."
+    },
+    "/users/{userId}/private/info": {
+      "schema": "UserProfilePrivate",
+      "description": "Confidential agronomist info, strictly secured."
+    },
+    "/sectors/{sectorId}": {
+      "schema": "Sector",
+      "description": "Topological agricultural zones."
+    },
+    "/sectors/{sectorId}/nodes/{nodeId}": {
+      "schema": "SensorNode",
+      "description": "Detailed node records with temperature, moisture, and PAR doses."
+    },
+    "/telemetry/battery": {
+      "schema": "BatteryTelemetry",
+      "description": "Live off-grid energy storage levels."
+    },
+    "/telemetry/pump": {
+      "schema": "WaterPumpTelemetry",
+      "description": "State controls for water backhaul flow."
+    },
+    "/irrigation_logs/{logId}": {
+      "schema": "IrrigationHistoryLog",
+      "description": "Offline-enqueued history of water flow events."
+    },
+    "/tank_logs/{logId}": {
+      "schema": "WaterTankHistoryLog",
+      "description": "Offline-enqueued history of water reservoir levels."
+    }
+  }
+}
