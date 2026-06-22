@@ -1,6 +1,6 @@
 import { SectorData, BatteryTelemetry, WaterPumpTelemetry, ChatMessage } from "../types";
 import { doc, setDoc } from "firebase/firestore";
-import { db, auth } from "../firebase";
+import { db, auth, handleFirestoreError, OperationType } from "../firebase";
 
 // High-fidelity interfaces for new offline historical records
 export interface IrrigationLog {
@@ -244,6 +244,12 @@ export const offlineStorage = {
       } catch (err) {
         console.warn(`[Offline Sync Engine] Local doc push failed for ${item.collection}/${item.docId}:`, err);
         result.errors.push(err);
+        try {
+          // Standardize offline sync logging using compliance error wrappers
+          handleFirestoreError(err, OperationType.WRITE, `${item.collection}/${item.docId}`);
+        } catch {
+          // Continue with next queued change
+        }
       }
     }
 
