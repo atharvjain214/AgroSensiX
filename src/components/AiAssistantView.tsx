@@ -695,6 +695,23 @@ All other telemetry sectors (including solar grids, pumps, and temperature senso
   // Local state tracking live dynamic typing language
   const [liveLanguage, setLiveLanguage] = useState<LangInfo>({ name: "English", code: "en-US" });
 
+  // Enhanced non-intrusive container-level scrolling logic
+  const messageListRef = useRef<HTMLDivElement>(null);
+  const [isUserAtBottom, setIsUserAtBottom] = useState(true);
+  const [showScrollDownNotifier, setShowScrollDownNotifier] = useState(false);
+
+  // Monitor scroll behavior of the chat container
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const container = e.currentTarget;
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    // We are at bottom if we are within 60px of the absolute bottom
+    const atBottom = scrollHeight - scrollTop - clientHeight < 60;
+    setIsUserAtBottom(atBottom);
+    if (atBottom) {
+      setShowScrollDownNotifier(false);
+    }
+  };
+
   // UPGRADE: Multilingual Voice Reader settings & preferences states
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedSettingLang, setSelectedSettingLang] = useState<string>("English");
@@ -903,9 +920,22 @@ All other telemetry sectors (including solar grids, pumps, and temperature senso
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  // Auto scroll to latest messages
+  // Run scroll adjustments when messages change or loading state toggles
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const container = messageListRef.current;
+    if (!container) return;
+
+    if (isUserAtBottom) {
+      // Direct property manipulation inside a decoupled microtask avoids iframe viewport jumping
+      const timer = setTimeout(() => {
+        container.scrollTop = container.scrollHeight;
+      }, 50);
+      setShowScrollDownNotifier(false);
+      return () => clearTimeout(timer);
+    } else {
+      // If user scrolled up, show a polite visual notifier button instead of forcing scroll
+      setShowScrollDownNotifier(true);
+    }
   }, [messages, isLoading]);
 
   // Handle Speech-to-Text dynamic start/stop
@@ -1117,7 +1147,6 @@ All other telemetry sectors (including solar grids, pumps, and temperature senso
       const interval = setInterval(() => {
         if (currentWordIndex >= responseWords.length) {
           clearInterval(interval);
-          handleStartSpeech(assistantMsg.id, instantReply, assistantMsg.detectedLanguage);
           return;
         }
         const partialResult = responseWords.slice(0, currentWordIndex + 1).join(" ");
@@ -1141,7 +1170,6 @@ All other telemetry sectors (including solar grids, pumps, and temperature senso
         };
         setMessages((prev) => [...prev, assistantMsg]);
         setIsLoading(false);
-        handleStartSpeech(assistantMsg.id, assistantMsg.content, assistantMsg.detectedLanguage);
       }, 750);
       return;
     }
@@ -1171,7 +1199,6 @@ All other telemetry sectors (including solar grids, pumps, and temperature senso
       const interval = setInterval(() => {
         if (currentWordIndex >= responseWords.length) {
           clearInterval(interval);
-          handleStartSpeech(assistantMsg.id, instantReply, assistantMsg.detectedLanguage);
           return;
         }
         const partialResult = responseWords.slice(0, currentWordIndex + 1).join(" ");
@@ -1283,8 +1310,6 @@ All other telemetry sectors (including solar grids, pumps, and temperature senso
         )
       );
 
-      handleStartSpeech(assistantMsgId, cleanSpeechText, foundLanguage);
-
     } catch (err: any) {
       console.warn("AI gateway transmission failed, adopting preloaded offline database fallbacks:", err);
       setTimeout(() => {
@@ -1302,7 +1327,6 @@ All other telemetry sectors (including solar grids, pumps, and temperature senso
           )
         );
         setIsLoading(false);
-        handleStartSpeech(assistantMsgId, replyText, currentLang.name);
       }, 400);
     } finally {
       setIsLoading(false);
@@ -1337,6 +1361,7 @@ All other telemetry sectors (including solar grids, pumps, and temperature senso
 
   const handlesSubmitForm = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isLoading) return; // Guard duplicate submissions safely
     handleSendMessage(inputValue);
   };
 
@@ -1348,10 +1373,10 @@ All other telemetry sectors (including solar grids, pumps, and temperature senso
         <div>
           <h2 className="text-xl md:text-2xl font-sans font-bold text-zinc-100 uppercase tracking-tight flex items-center gap-2">
             <Bot className="w-5 h-5 text-emerald-400 animate-pulse" />
-            AI Farming Assistant
+            AgroSensiX Agricultural Expert
           </h2>
           <p className="text-xs font-mono text-zinc-500 font-bold">
-            Multilingual Voice Input support 🎤 & Speech output 🔊 powered by local smart farm index.
+            Live Agronomist Advisory & Machine Intelligence optimized with soil moisture telemetry and local battery harvest data.
           </p>
         </div>
 
@@ -1360,7 +1385,7 @@ All other telemetry sectors (including solar grids, pumps, and temperature senso
           <span className={`text-[10px] font-mono uppercase tracking-widest bg-zinc-950 px-3 py-1 rounded-xl border ${
             isOnline ? "text-emerald-400 border-emerald-500/10" : "text-amber-400 border-amber-500/20"
           }`}>
-            {isOnline ? "FARM BOT: ONLINE" : "OFFLINE COGNITIVE MODE ACTIVATE"}
+            {isOnline ? "EXPERT: ONLINE" : "OFFLINE COGNITIVE MODE ACTIVATE"}
           </span>
         </div>
       </div>
@@ -1398,7 +1423,11 @@ All other telemetry sectors (including solar grids, pumps, and temperature senso
           </div>
 
           {/* Message List */}
-          <div className="flex-1 overflow-y-auto p-5 space-y-4">
+          <div 
+            ref={messageListRef}
+            onScroll={handleScroll}
+            className="flex-1 overflow-y-auto p-5 space-y-4"
+          >
             {messages.map((msg) => {
               const detectedLanguageOfMsg = msg.detectedLanguage || detectLanguage(msg.content).name;
               const isAssistant = msg.role === "assistant";
@@ -1555,6 +1584,23 @@ All other telemetry sectors (including solar grids, pumps, and temperature senso
             <div ref={messagesEndRef} />
           </div>
 
+          {showScrollDownNotifier && (
+            <button
+              type="button"
+              onClick={() => {
+                const container = messageListRef.current;
+                if (container) {
+                  container.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+                  setIsUserAtBottom(true);
+                  setShowScrollDownNotifier(false);
+                }
+              }}
+              className="absolute bottom-18 left-1/2 -translate-x-1/2 bg-emerald-500 hover:bg-emerald-450 border border-emerald-400/20 text-[#020405] font-sans text-[10px] font-bold py-1.5 px-4 rounded-full shadow-xl flex items-center gap-1.5 transition-all cursor-pointer hover:scale-105 active:scale-95 uppercase tracking-wider z-25 animate-bounce"
+            >
+              <span>New Response ↓</span>
+            </button>
+          )}
+
           {/* Form Action Input with Voice / Microphone Trigger */}
           <div className="border-t border-zinc-900 bg-zinc-950/80 p-3.5 space-y-2.5">
             
@@ -1603,7 +1649,6 @@ All other telemetry sectors (including solar grids, pumps, and temperature senso
                   className={`w-full bg-zinc-900 border border-zinc-900/80 rounded-xl py-2.5 px-4 text-xs text-zinc-200 focus:outline-none focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/10 placeholder-zinc-650 transition-all font-bold ${
                     isRecording ? "border-red-500/40 ring-1 ring-red-500/10 text-red-200" : ""
                   }`}
-                  disabled={isLoading}
                 />
               </div>
 

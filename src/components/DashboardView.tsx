@@ -154,127 +154,241 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
         </div>
       </div>
 
-      {/* CORE INTENSIFIED MONITOR STATS ROW: HEALTH, WATER, SOLAR */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      {/* CORE INTENSIFIED BENTO MONITOR DECK: 7 HIGH-IMPACT CARDS */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6">
         
-        {/* SECTION 1: FARM HEALTH SCORE */}
-        <div className="bg-[#03090f]/70 border border-zinc-900 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between shadow-xl min-h-[220px]">
+        {/* CARD 1: CROP HEALTH INDEX (LG: COL-SPAN-4) */}
+        <div className="lg:col-span-4 bg-[#03090f]/75 border border-zinc-900/90 rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between shadow-xl min-h-[220px]">
           <div className="absolute top-0 right-0 w-28 h-28 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
           
           <div className="flex justify-between items-start">
             <div>
-              <span className="text-[10px] font-mono text-zinc-500 block uppercase tracking-widest font-bold">AGRICULTURE INDEX</span>
-              <h3 className="text-sm font-sans font-bold text-zinc-200 mt-1 uppercase tracking-wider">Crop Health Score</h3>
+              <span className="text-[9px] font-mono text-zinc-500 block uppercase tracking-widest font-black">CROP INDEX SYSTEM</span>
+              <h3 className="text-xs font-sans font-black text-zinc-200 mt-1 uppercase tracking-wider">Crop Health Rating</h3>
             </div>
-            <span className="p-1 px-2.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/15 rounded text-[9.5px] font-mono uppercase font-bold tracking-wider">Metabolic Flow</span>
+            <span className="p-1 px-2.5 bg-emerald-500/10 text-emerald-400 border border-emerald-500/15 rounded text-[9px] font-mono uppercase font-black tracking-wider">Real-Time Flow</span>
           </div>
 
-          <div className="flex items-center gap-6 my-4">
+          <div className="flex items-center gap-5 my-3">
             {/* Elegant Circular Progress SVG */}
-            <div className="relative w-24 h-24 shrink-0">
+            <div className="relative w-20 h-20 shrink-0">
               <svg className="w-full h-full transform -rotate-90">
-                <circle cx="48" cy="48" r="40" stroke="#0e1b24" strokeWidth="6" fill="transparent" />
-                <circle cx="48" cy="48" r="40" stroke="#10b981" strokeWidth="6" fill="transparent" 
-                        strokeDasharray={251.2} strokeDashoffset={251.2 - (251.2 * averageHealthScore) / 100}
+                <circle cx="40" cy="40" r="34" stroke="#0e1b24" strokeWidth="5.5" fill="transparent" />
+                <circle cx="40" cy="40" r="34" stroke="#10b981" strokeWidth="5.5" fill="transparent" 
+                        strokeDasharray={213.6} strokeDashoffset={213.6 - (213.6 * averageHealthScore) / 100}
                         strokeLinecap="round" className="transition-all duration-1000 ease-out" />
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
-                <span className="text-xl font-bold font-mono text-white leading-none">{averageHealthScore}%</span>
-                <span className="text-[9px] text-zinc-500 uppercase font-mono mt-1 font-semibold">Score</span>
+                <span className="text-lg font-bold font-mono text-white leading-none">{averageHealthScore}%</span>
+                <span className="text-[8.5px] text-zinc-500 uppercase font-mono mt-0.5 font-semibold">Quality</span>
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <span className={`text-sm font-sans uppercase font-bold tracking-wider block ${healthInfo.color}`}>
+            <div className="space-y-1">
+              <span className={`text-xs font-sans uppercase font-black tracking-wider block ${healthInfo.color}`}>
                 ● {healthInfo.label}
               </span>
-              <p className="text-[11px] font-mono text-zinc-400 leading-normal font-bold">
-                {healthInfo.desc}. Direct root transpiration indicators are stabilized this sequence.
+              <p className="text-[10px] font-sans text-zinc-400 leading-normal font-bold">
+                {healthInfo.desc}. Cellular vascular pressure is fully stabilized in this sequence.
               </p>
             </div>
           </div>
 
-          <div className="border-t border-zinc-900/60 pt-3 flex justify-between font-mono text-[9px] text-zinc-550 uppercase tracking-widest font-semibold">
-            <span>CROP TYPE:</span>
-            <span className="text-zinc-350">{activeSector.cropType.split(" ")[0]}</span>
+          <div className="border-t border-zinc-900/60 pt-3 flex justify-between font-mono text-[9px] text-zinc-550 uppercase tracking-widest font-black">
+            <span>CROP CATEGORY:</span>
+            <span className="text-emerald-400 font-bold">{activeSector.cropType}</span>
           </div>
         </div>
 
-        {/* SECTION 2: WATER INTELLIGENCE */}
-        <div className="bg-[#03090f]/70 border border-zinc-900 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between shadow-xl min-h-[220px]">
+        {/* CARD 2: SOIL MOISTURE (LG: COL-SPAN-4) */}
+        <div className="lg:col-span-4 bg-[#03090f]/75 border border-zinc-900/90 rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between shadow-xl min-h-[220px]">
           <div className="absolute top-0 right-0 w-28 h-28 bg-cyan-500/5 rounded-full blur-2xl pointer-events-none" />
           
           <div className="flex justify-between items-start">
             <div>
-              <span className="text-[10px] font-mono text-zinc-500 block uppercase tracking-widest font-bold">HYDRO INTERFACE</span>
-              <h3 className="text-sm font-sans font-bold text-zinc-200 mt-1 uppercase tracking-wider">Water Intelligence</h3>
+              <span className="text-[9px] font-mono text-zinc-500 block uppercase tracking-widest font-black">RHIZOSPHERE LABS</span>
+              <h3 className="text-xs font-sans font-black text-zinc-200 mt-1 uppercase tracking-wider">Root Soil Moisture</h3>
             </div>
-            <span className="p-1 px-2.5 bg-cyan-500/10 text-cyan-300 border border-cyan-500/15 rounded text-[9.5px] font-mono uppercase font-bold tracking-wider">ESP32 flow</span>
+            <span className="p-1 px-2.5 bg-cyan-550/10 text-cyan-400 border border-cyan-500/15 rounded text-[9px] font-mono uppercase font-black tracking-wider">MEAN VALUE</span>
+          </div>
+
+          <div className="my-3 space-y-2">
+            <div className="flex items-baseline gap-2">
+              <div className="text-3xl font-black font-mono text-zinc-105">
+                {Math.round(activeSector.nodes.reduce((acc, n) => acc + n.soilMoisture, 0) / activeSector.nodes.length)}%
+              </div>
+              <span className="text-[10px] font-sans text-zinc-500 uppercase font-bold">Volumetric water (Vwc)</span>
+            </div>
+            
+            {/* Compact range visual slider */}
+            <div className="space-y-1">
+              <div className="w-full bg-[#0d161d] h-2.5 rounded-full overflow-hidden border border-zinc-900 flex relative">
+                {/* Low safety zone */}
+                <div className="absolute top-0 bottom-0 left-0 bg-red-500/20" style={{ width: `${activeSector.moistureThresholdMin}%` }} />
+                {/* Target optimal zone */}
+                <div className="absolute top-0 bottom-0 bg-emerald-500/15 border-x border-emerald-500/20" style={{ left: `${activeSector.moistureThresholdMin}%`, right: `${100 - activeSector.moistureThresholdMax}%` }} />
+                {/* Active value mark */}
+                <div className="absolute top-0 bottom-0 w-2.5 bg-cyan-450 shadow-[0_0_10px_rgba(34,211,238,0.7)] rounded" style={{ left: `${Math.min(97, Math.max(3, Math.round(activeSector.nodes.reduce((acc, n) => acc + n.soilMoisture, 0) / activeSector.nodes.length)))}%` }} />
+              </div>
+              <div className="flex justify-between text-[8px] font-mono text-zinc-650 font-bold">
+                <span>DRY LIMIT: {activeSector.moistureThresholdMin}%</span>
+                <span className="text-emerald-450">OPTIMAL</span>
+                <span>WET LIMIT: {activeSector.moistureThresholdMax}%</span>
+              </div>
+            </div>
+          </div>
+
+          <div className="border-t border-zinc-900/60 pt-3 flex justify-between font-mono text-[9px] text-zinc-550 uppercase tracking-widest font-black">
+            <span>MONITOR STATIONS:</span>
+            <span className="text-cyan-300 font-bold">{activeSector.nodes.length} SENSOR NODES</span>
+          </div>
+        </div>
+
+        {/* CARD 3: WATER RESERVOIR VOLUME (LG: COL-SPAN-4) */}
+        <div className="lg:col-span-4 bg-[#03090f]/75 border border-zinc-900/90 rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between shadow-xl min-h-[220px]">
+          <div className="absolute top-0 right-0 w-28 h-28 bg-teal-500/5 rounded-full blur-2xl pointer-events-none" />
+          
+          <div className="flex justify-between items-start">
+            <div>
+              <span className="text-[9px] font-mono text-zinc-500 block uppercase tracking-widest font-black">HYDRO INTEL RESERVE</span>
+              <h3 className="text-xs font-sans font-black text-zinc-200 mt-1 uppercase tracking-wider">Water Tank Capacity</h3>
+            </div>
+            <span className="p-1 px-2.5 bg-teal-555/10 text-cyan-300 border border-teal-500/15 rounded text-[9px] font-mono uppercase font-black tracking-wider">SOLENOID VALVE</span>
           </div>
 
           <div className="grid grid-cols-2 gap-4 my-2 text-left">
             <div>
-              <span className="text-[9px] font-mono text-zinc-550 block uppercase tracking-wider">HYDRO STATION LEVEL</span>
-              <div className="text-lg font-bold font-mono text-zinc-100 mt-1 flex items-baseline">
+              <span className="text-[8.5px] font-mono text-zinc-550 block uppercase tracking-wider font-bold">STORAGE LEVEL</span>
+              <div className="text-2xl font-black font-mono text-zinc-100 mt-0.5 flex items-baseline">
                 {pump.reservoirLevelPercent || 74}%
-                <span className="text-[10px] font-sans text-zinc-550 font-normal ml-1">Volume</span>
+                <span className="text-[9px] font-sans text-zinc-550 font-normal ml-1">Vol</span>
               </div>
-              <div className="w-full bg-zinc-950 h-1 rounded-full overflow-hidden mt-1.5 border border-zinc-900">
+              <div className="w-full bg-[#0b1617] h-1.5 rounded-full overflow-hidden mt-1.5 border border-zinc-900">
                 <div className="bg-cyan-400 h-full rounded-full" style={{ width: `${pump.reservoirLevelPercent || 74}%` }} />
               </div>
             </div>
 
             <div>
-              <span className="text-[9px] font-mono text-zinc-550 block uppercase tracking-wider">VALVE PRESSURE</span>
-              <div className="text-lg font-bold font-mono text-zinc-100 mt-1 flex items-baseline">
-                {pump.pressureBar} <span className="text-[10px] font-sans font-normal text-zinc-550 ml-0.5">BAR</span>
+              <span className="text-[8.5px] font-mono text-zinc-550 block uppercase tracking-wider font-bold">PIPELINE BAR</span>
+              <div className="text-2xl font-black font-mono text-zinc-100 mt-0.5 flex items-baseline">
+                {pump.pressureBar} <span className="text-[9.5px] font-sans font-normal text-zinc-550 ml-0.5">BAR</span>
               </div>
-              <span className="text-[9px] font-mono text-emerald-450 uppercase block font-semibold tracking-wider mt-1.5">● FLOW: {pump.flowRateLpm} LPM</span>
+              <span className="text-[8.5px] font-mono text-emerald-400 uppercase block font-black tracking-wider mt-1.5">● FLOW: {pump.flowRateLpm} LPM</span>
             </div>
           </div>
 
-          <div className="border-t border-zinc-900/60 pt-3 flex justify-between font-mono text-[9px] text-zinc-550 uppercase tracking-widest font-semibold">
-            <span>SCHEDULING:</span>
-            <span className="text-cyan-300">Eco Hydrology ON</span>
+          <div className="border-t border-zinc-900/60 pt-3 flex justify-between font-mono text-[9px] text-zinc-550 uppercase tracking-widest font-black">
+            <span>SYSTEM STATE:</span>
+            <span className="text-cyan-300 font-bold">{pump.status.toUpperCase()} PRESSETS</span>
           </div>
         </div>
 
-        {/* SECTION 3: SOLAR INTELLIGENCE */}
-        <div className="bg-[#03090f]/70 border border-zinc-900 rounded-2xl p-6 relative overflow-hidden flex flex-col justify-between shadow-xl min-h-[220px]">
-          <div className="absolute top-0 right-0 w-28 h-28 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
+        {/* CARD 4: SOLAR GENERATION POWER (LG: COL-SPAN-3) */}
+        <div className="lg:col-span-3 bg-[#03090f]/75 border border-zinc-900/90 rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between shadow-xl min-h-[180px]">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-xl pointer-events-none" />
           
           <div className="flex justify-between items-start">
-            <div>
-              <span className="text-[10px] font-mono text-zinc-500 block uppercase tracking-widest font-bold">CLEAN ENERGY POWER</span>
-              <h3 className="text-sm font-sans font-bold text-zinc-200 mt-1 uppercase tracking-wider">Solar Intelligence</h3>
-            </div>
-            <span className="p-1 px-2.5 bg-amber-500/10 text-amber-500 border border-amber-500/15 rounded text-[9.5px] font-mono uppercase font-bold tracking-wider">Solar Harvest</span>
+            <span className="text-[9px] font-mono text-zinc-500 block uppercase tracking-widest font-black">MICRO ENERGY HARVEST</span>
+            <Zap className="w-4 h-4 text-amber-400" />
           </div>
 
-          <div className="grid grid-cols-2 gap-4 my-2 text-left">
-            <div>
-              <span className="text-[9px] font-mono text-zinc-550 block uppercase tracking-wider">RAW GENERATION</span>
-              <div className="text-lg font-bold font-mono text-zinc-100 mt-1 flex items-baseline">
-                {battery.solarInputKw} <span className="text-[10px] font-sans font-normal text-zinc-550 ml-0.5">kW</span>
-              </div>
-              <span className="text-[9px] font-mono text-amber-400 uppercase block font-semibold tracking-wider mt-1.5">● Voltage {battery.voltage}V</span>
+          <div className="my-2 text-left">
+            <span className="text-[8.5px] font-mono text-zinc-550 block uppercase tracking-wider font-bold">SOLAR ACTIVE HARVEST</span>
+            <div className="text-2xl font-black font-mono text-zinc-100 mt-0.5 flex items-baseline">
+              {battery.solarInputKw} <span className="text-[10px] font-sans font-normal text-zinc-500 ml-1">kW / Day</span>
             </div>
-
-            <div>
-              <span className="text-[9px] font-mono text-zinc-550 block uppercase tracking-wider">BATTERY CHARGE</span>
-              <div className="text-lg font-bold font-mono text-zinc-100 mt-1 flex items-baseline">
-                {battery.chargePercent}%
-                <span className="text-[10px] font-sans font-normal text-zinc-550 ml-1">lithium</span>
-              </div>
-              <div className="w-full bg-zinc-950 h-1 rounded-full overflow-hidden mt-1.5 border border-zinc-900">
-                <div className="bg-amber-400 h-full rounded-full" style={{ width: `${battery.chargePercent}%` }} />
-              </div>
+            
+            <div className="flex items-center gap-1.5 mt-2.5 font-mono text-[9px] text-amber-500 font-bold uppercase">
+              <span className="w-2 h-2 rounded-full bg-amber-450 animate-ping shrink-0" />
+              <span>Charge: {battery.chargePercent}% Lithium storage</span>
             </div>
           </div>
 
-          <div className="border-t border-zinc-900/60 pt-3 flex justify-between font-mono text-[9px] text-zinc-550 uppercase tracking-widest font-semibold">
-            <span>SAVINGS YTD:</span>
-            <span className="text-amber-400">3,120 kW (Eco)</span>
+          <div className="border-t border-zinc-900/60 pt-2.5 flex justify-between font-mono text-[8.5px] text-zinc-550 uppercase tracking-widest font-bold">
+            <span>SAVINGS EST:</span>
+            <span className="text-amber-400">3,120 kW (Eco Grid)</span>
+          </div>
+        </div>
+
+        {/* CARD 5: AMBIENT HEAT TEMPERATURE (LG: COL-SPAN-3) */}
+        <div className="lg:col-span-3 bg-[#03090f]/75 border border-zinc-900/90 rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between shadow-xl min-h-[180px]">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/5 rounded-full blur-xl pointer-events-none" />
+          
+          <div className="flex justify-between items-start">
+            <span className="text-[9px] font-mono text-zinc-500 block uppercase tracking-widest font-black">CANOPY THERMAL LAB</span>
+            <Thermometer className="w-4 h-4 text-orange-400" />
+          </div>
+
+          <div className="my-2 text-left">
+            <span className="text-[8.5px] font-mono text-zinc-550 block uppercase tracking-wider font-bold">MEAN AIR TEMPERATURE</span>
+            <div className="text-2xl font-black font-mono text-zinc-105 mt-0.5 flex items-baseline">
+              {Math.round((activeSector.nodes.reduce((acc, n) => acc + n.temperature, 0) / activeSector.nodes.length) * 10) / 10}°C
+              <span className="text-[10px] font-sans text-zinc-550 font-normal ml-1">Ambient</span>
+            </div>
+            <p className="text-[9px] font-sans text-zinc-500 mt-2 font-semibold">Regulated in proper photosynthesis spectrum parameters.</p>
+          </div>
+
+          <div className="border-t border-zinc-900/60 pt-2.5 flex justify-between font-mono text-[8.5px] text-zinc-550 uppercase tracking-widest font-bold">
+            <span>TRANSCEIVER:</span>
+            <span className="text-zinc-400 font-bold">ESP-A28 THERMAL</span>
+          </div>
+        </div>
+
+        {/* CARD 6: RAIN DETECTION & VENI ACTUATOR (LG: COL-SPAN-3) */}
+        <div className="lg:col-span-3 bg-[#03090f]/75 border border-zinc-900/90 rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between shadow-xl min-h-[180px]">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-xl pointer-events-none" />
+          
+          <div className="flex justify-between items-start">
+            <span className="text-[9px] font-mono text-zinc-500 block uppercase tracking-widest font-black">WEATHER SHIELD RECEPTORS</span>
+            <CloudSun className="w-4 h-4 text-cyan-400" />
+          </div>
+
+          <div className="my-2 text-left space-y-1.5">
+            <span className="text-[8.5px] font-mono text-zinc-555 block uppercase tracking-wider font-bold">VENTILATOR ACTUATORS</span>
+            <div className="text-xl font-black font-mono text-zinc-100 uppercase tracking-tight flex items-center gap-1.5 leading-none">
+              <span className={`w-2.5 h-2.5 rounded-full ${roofState === "Open" ? "bg-emerald-450 shadow-[0_0_8px_rgba(16,185,129,0.5)]" : "bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)] animate-pulse"}`} />
+              Shield {roofState}
+            </div>
+            
+            <div className="text-[9px] font-mono text-zinc-450 uppercase font-bold flex items-center gap-1">
+              <span>Sensor:</span>
+              <span className={isRainDetected ? "text-cyan-400 font-black animate-pulse" : "text-zinc-500"}>
+                {isRainDetected ? "🌧️ OUTDOOR RAIN DETECTED" : "☀️ SHIELD CLEAR"}
+              </span>
+            </div>
+          </div>
+
+          <div className="border-t border-zinc-900/60 pt-2.5 flex justify-between font-mono text-[8.5px] text-zinc-550 uppercase tracking-widest font-bold">
+            <span>CONTROL MODE:</span>
+            <span className="text-emerald-455 font-bold">{roofControlMode.toUpperCase()} DECISION</span>
+          </div>
+        </div>
+
+        {/* CARD 7: ACTIVE WARNING ALERTS COUNT (LG: COL-SPAN-3) */}
+        <div className="lg:col-span-3 bg-[#03090f]/75 border border-zinc-900/90 rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between shadow-xl min-h-[180px]">
+          <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 rounded-full blur-xl pointer-events-none" />
+          
+          <div className="flex justify-between items-start">
+            <span className="text-[9px] font-mono text-zinc-500 block uppercase tracking-widest font-black">ECO RISK ASSESSMENT</span>
+            <AlertTriangle className={`w-4 h-4 ${activeSector.nodes.some(n => n.soilMoisture < activeSector.moistureThresholdMin) ? "text-rose-500 animate-bounce" : "text-emerald-400"}`} />
+          </div>
+
+          <div className="my-2 text-left">
+            <span className="text-[8.5px] font-mono text-zinc-555 block uppercase tracking-wider font-bold">ACTIVE WARN CHANNELS</span>
+            <div className="text-2xl font-black font-mono text-zinc-100 mt-0.5 flex items-baseline">
+              {activeSector.nodes.filter(n => n.soilMoisture < activeSector.moistureThresholdMin || n.soilMoisture > activeSector.moistureThresholdMax).length}
+              <span className="text-[10px] font-sans text-zinc-550 font-normal ml-1">Dehydrated Nodes</span>
+            </div>
+            <p className="text-[9px] font-sans text-zinc-500 mt-2 leading-none font-bold">
+              {activeSector.nodes.some(n => n.soilMoisture < activeSector.moistureThresholdMin) 
+                ? "Automatic loop irrigation is advised" 
+                : "All root segments fully watered."}
+            </p>
+          </div>
+
+          <div className="border-t border-zinc-900/60 pt-2.5 flex justify-between font-mono text-[8.5px] text-zinc-550 uppercase tracking-widest font-bold">
+            <span>HEALTH INDEX:</span>
+            <span className="text-emerald-400 font-bold">{activeSector.plantHealthIndex}/100</span>
           </div>
         </div>
 

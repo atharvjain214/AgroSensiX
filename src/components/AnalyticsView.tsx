@@ -12,7 +12,7 @@ import {
 
 export const AnalyticsView: React.FC = () => {
   const [selectedSector, setSelectedSector] = useState<"G14" | "7G">("G14");
-  const [metricTab, setMetricTab] = useState<"soil" | "climate" | "solar" | "tank" | "irrigation">("soil");
+  const [metricTab, setMetricTab] = useState<"soil" | "climate" | "solar" | "tank" | "irrigation" | "consumption">("soil");
 
   const linesToDraw = {
     soil: [
@@ -60,6 +60,14 @@ export const AnalyticsView: React.FC = () => {
         name: "Irrigation Flow Dispensed (Liters)",
         strokeWidth: 2.5
       }
+    ],
+    consumption: [
+      {
+        key: "waterConsumptionLiters",
+        color: "#a855f7",
+        name: "Estimated Bio-Water Transpiration (Liters)",
+        strokeWidth: 2.5
+      }
     ]
   };
 
@@ -70,6 +78,7 @@ export const AnalyticsView: React.FC = () => {
       case "solar": return "Solar Energy Production History";
       case "tank": return "Water Tank Capacity History";
       case "irrigation": return "Water Dispersion History (Liters)";
+      case "consumption": return "24-Hour Bio Water Consumption Trends";
     }
   };
 
@@ -80,8 +89,14 @@ export const AnalyticsView: React.FC = () => {
       case "solar": return "kW";
       case "tank": return "%";
       case "irrigation": return "L";
+      case "consumption": return "L";
     }
   };
+
+  const enrichedData = historical24hData.map(d => ({
+    ...d,
+    waterConsumptionLiters: Math.round(d.irrigationUsedLiters * 1.15)
+  }));
 
   // Static Matrix data for the crop Yield Prediction
   const yieldFactors = [
@@ -161,6 +176,16 @@ export const AnalyticsView: React.FC = () => {
               IRRIGATION
             </button>
             <button
+              onClick={() => setMetricTab("consumption")}
+              className={`px-3 py-1.5 text-[10px] font-mono rounded-lg cursor-pointer border ${
+                metricTab === "consumption" 
+                  ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/20 font-semibold shadow-[0_0_12px_rgba(16,185,129,0.05)]" 
+                  : "text-zinc-500 hover:text-zinc-300 border-transparent"
+              }`}
+            >
+              WATER CONSUMPTION
+            </button>
+            <button
               onClick={() => setMetricTab("solar")}
               className={`px-3 py-1.5 text-[10px] font-mono rounded-lg cursor-pointer border ${
                 metricTab === "solar" 
@@ -177,7 +202,7 @@ export const AnalyticsView: React.FC = () => {
       {/* Custom Reusable Chart Canvas layout */}
       <div className="rounded-2xl border border-zinc-900 bg-zinc-950/45 p-4.5 md:p-6 shadow-xl relative overflow-hidden backdrop-blur-md">
         <CustomChart
-          data={historical24hData}
+          data={enrichedData}
           xAxisKey="time"
           lines={linesToDraw[metricTab]}
           title={getMetricTitle()}

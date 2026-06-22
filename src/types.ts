@@ -12,6 +12,7 @@ export enum NavigationPage {
   OFFLINE_HUB = "offline_hub",
   ARCHITECTURE = "architecture",
   ABOUT = "about",
+  SETTINGS = "settings",
   LOGIN = "login"
 }
 

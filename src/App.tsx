@@ -23,6 +23,7 @@ import { AboutView } from "./components/AboutView";
 import { LoginView } from "./components/LoginView";
 import { OfflineManager } from "./components/OfflineManager";
 import { ImpactView } from "./components/ImpactView";
+import { SettingsView } from "./components/SettingsView";
 import { offlineStorage } from "./utils/offlineStorage";
 
 // Import Layout Icons
@@ -45,7 +46,16 @@ import {
   Leaf,
   Wifi,
   WifiOff,
-  Database
+  Database,
+  Droplets,
+  Settings,
+  ChevronLeft,
+  ChevronRight,
+  Home,
+  Globe,
+  Cpu,
+  BookOpen,
+  Info
 } from "lucide-react";
 
 export default function App() {
@@ -59,6 +69,14 @@ export default function App() {
     setTheme(nextTheme);
     localStorage.setItem("theme", nextTheme);
   };
+
+  const [isSidebarExpanded, setIsSidebarExpanded] = useState<boolean>(() => {
+    return localStorage.getItem("settings_sidebar_expanded") !== "false";
+  });
+
+  useEffect(() => {
+    localStorage.setItem("settings_sidebar_expanded", isSidebarExpanded ? "true" : "false");
+  }, [isSidebarExpanded]);
 
   // Authentication states linked directly with live Firebase Auth credentials and persistent caches
   const [loggedInUser, setLoggedInUser] = useState<string | null>(() => {
@@ -586,7 +604,7 @@ export default function App() {
 
   // Render the current active view content
   const renderActiveView = () => {
-    if (!loggedInUser && currentPage !== NavigationPage.HOME && currentPage !== NavigationPage.ABOUT && currentPage !== NavigationPage.IMPACT) {
+    if (!loggedInUser && currentPage !== NavigationPage.HOME && currentPage !== NavigationPage.ABOUT && currentPage !== NavigationPage.IMPACT && currentPage !== NavigationPage.SETTINGS) {
       return (
         <LoginView 
           onSuccessLogin={handleSuccessLogin} 
@@ -652,6 +670,13 @@ export default function App() {
         return <BlueprintView />;
       case NavigationPage.ABOUT:
         return <AboutView />;
+      case NavigationPage.SETTINGS:
+        return (
+          <SettingsView 
+            theme={theme}
+            onToggleTheme={toggleTheme}
+          />
+        );
       default:
         return (
           <HomeView 
@@ -667,278 +692,358 @@ export default function App() {
 
   // Navigation Links details list
   const navLinks = [
-    { page: NavigationPage.HOME, label: "Home Overview", icon: Sprout },
-    { page: NavigationPage.DASHBOARD, label: "Farm Monitoring", icon: LayoutDashboard },
-    { page: NavigationPage.ANALYTICS, label: "Weather & Environment", icon: LineChart },
-    { page: NavigationPage.AI_ASSISTANT, label: "AI Assistant", icon: Bot },
-    { page: NavigationPage.IRRIGATION_CONTROL, label: "Water Control", icon: Sliders },
-    { page: NavigationPage.IMPACT, label: "Our Impact", icon: Leaf },
-    { page: NavigationPage.OFFLINE_HUB, label: "Offline Operations", icon: Database },
-    { page: NavigationPage.ARCHITECTURE, label: "System Information", icon: Code },
-    { page: NavigationPage.ABOUT, label: "About Us", icon: HelpCircle },
+    { page: NavigationPage.HOME, label: "Home Dashboard", desc: "Farm Command Center", icon: Home },
+    { page: NavigationPage.DASHBOARD, label: "Farm Intelligence", desc: "Digital twin crop telemetry", icon: Sprout },
+    { page: NavigationPage.ANALYTICS, label: "Weather Intelligence", desc: "Barometric environments", icon: Sun },
+    { page: NavigationPage.AI_ASSISTANT, label: "AI Assistant Workspace", desc: "Specialist crop advice suite", icon: Bot },
+    { page: NavigationPage.IRRIGATION_CONTROL, label: "Water Intelligence", desc: "Reservoir & eco pump status", icon: Droplets },
+    { page: NavigationPage.IMPACT, label: "Our Impact Meter", desc: "Sustainability benchmark logs", icon: Leaf },
+    { page: NavigationPage.OFFLINE_HUB, label: "Offline Grid System", desc: "Local database caching", icon: Database },
+    { page: NavigationPage.ARCHITECTURE, label: "Diagnostics Center", desc: "ESP32 diagnostic boards", icon: Cpu },
+    { page: NavigationPage.ABOUT, label: "About AgroSensiX", desc: "Startup vision & mission", icon: HelpCircle },
+    { page: NavigationPage.SETTINGS, label: "System Center / Settings", desc: "Core preferences panel", icon: Settings },
   ];
 
   return (
-    <div className={`min-h-screen flex flex-col ${theme === 'dark' ? 'theme-dark' : 'theme-light'}`}>
-      <div className="flex-1 flex flex-col bg-[var(--bg-app)] bg-[radial-gradient(ellipse_at_top,_var(--tw-gradient-stops))] from-[var(--bg-app-gradient-from)] via-[var(--bg-app)] to-[var(--bg-app-gradient-to)] text-zinc-100 relative overflow-x-hidden selection:bg-emerald-500/20 selection:text-emerald-300">
+    <div className={`min-h-screen flex w-full bg-[var(--bg-app)] text-zinc-100 relative selection:bg-emerald-500/20 selection:text-emerald-300 ${theme === 'dark' ? 'theme-dark' : 'theme-light'}`}>
+      
+      {/* 1. PERMANENT COLLAPSIBLE SIDEBAR (DESKTOP ONLY) */}
+      <aside 
+        className={`hidden lg:flex flex-col border-r border-zinc-900/60 bg-zinc-950/80 backdrop-blur-xl transition-all duration-350 select-none shrink-0 z-40 h-screen sticky top-0 ${
+          isSidebarExpanded ? "w-72" : "w-20"
+        }`}
+      >
+        {/* Sidebar Header with Brand logo */}
+        <div className="p-4 border-b border-zinc-900/60 flex items-center justify-between overflow-hidden shrink-0">
+          <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setCurrentPage(NavigationPage.HOME)}>
+            <div className="p-2.5 bg-emerald-500/10 border border-emerald-500/20 group-hover:border-emerald-500/40 rounded-xl text-emerald-400 transition-all duration-300 shadow-[0_0_15px_rgba(16,185,129,0.1)] shrink-0">
+              <Sprout className="w-5 h-5 group-hover:scale-110 transition-transform duration-300" />
+            </div>
+            {isSidebarExpanded && (
+              <div className="animate-fade-in text-left">
+                <span className="font-sans text-sm font-bold tracking-wider text-zinc-100 block leading-none">
+                  AgroSensiX
+                </span>
+                <span className="text-[9px] font-mono text-emerald-400 font-semibold uppercase block tracking-widest mt-1">
+                  Agricultural OS
+                </span>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Navigation list */}
+        <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto custom-scrollbar text-left">
+          {navLinks.map((link) => {
+            const Icon = link.icon;
+            const isActive = currentPage === link.page;
+            return (
+              <button
+                key={link.page}
+                onClick={() => {
+                  setCurrentPage(link.page);
+                  window.scrollTo({ top: 0, behavior: "smooth" });
+                }}
+                className={`w-full group px-3 py-2.5 rounded-xl transition-all duration-300 flex items-center gap-3 border text-left cursor-pointer relative ${
+                  isActive
+                    ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/25 font-semibold shadow-[0_0_15px_rgba(16,185,129,0.06)]"
+                    : "text-zinc-400 hover:text-zinc-200 hover:bg-zinc-900/30 border-transparent"
+                }`}
+                title={!isSidebarExpanded ? link.label : undefined}
+              >
+                {/* Active page highlight indicator */}
+                {isActive && (
+                  <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-emerald-500 rounded-r-full" />
+                )}
+
+                <div className={`p-1.5 rounded-lg border flex items-center justify-center shrink-0 transition-all duration-300 ${
+                  isActive ? "bg-emerald-500/15 border-emerald-500/30 text-emerald-350" : "bg-zinc-900/40 border-zinc-850 group-hover:border-zinc-800 text-zinc-500 group-hover:text-zinc-300"
+                }`}>
+                  <Icon className="w-4 h-4" />
+                </div>
+                {isSidebarExpanded ? (
+                  <div className="truncate animate-fade-in">
+                    <p className="text-xs font-sans font-bold leading-none tracking-wide">{link.label}</p>
+                    <p className="text-[9px] font-sans text-zinc-500 font-medium tracking-normal mt-1 leading-none">{link.desc}</p>
+                  </div>
+                ) : (
+                  <div className="absolute left-16 bg-zinc-950 border border-zinc-850 text-emerald-400 text-[10px] font-sans font-semibold px-3 py-1.5 rounded-lg shadow-xl uppercase tracking-wider opacity-0 pointer-events-none group-hover:opacity-100 group-hover:translate-x-1.5 transition-all z-50 whitespace-nowrap">
+                    {link.label}
+                  </div>
+                )}
+              </button>
+            );
+          })}
+        </nav>
+
+        {/* Sidebar Footer with session/bypass badges + expand-collapse toggle button */}
+        <div className="p-3 border-t border-zinc-900/60 space-y-2.5 bg-zinc-950/40 shrink-0">
+          {/* Admin badge */}
+          {isSidebarExpanded && loggedInUser && (
+            <div className="p-2 bg-zinc-900/50 border border-zinc-900/60 rounded-xl flex items-center gap-2 font-mono text-[9px] tracking-wide text-zinc-400 uppercase truncate">
+              <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+              <span className="truncate">SYS_ADMIN: {loggedInUser}</span>
+            </div>
+          )}
+
+          {/* Sidebar collapse toggle */}
+          <button
+            onClick={() => setIsSidebarExpanded(!isSidebarExpanded)}
+            className="w-full py-2 bg-zinc-900/40 hover:bg-zinc-900/80 border border-zinc-900 hover:border-zinc-850 rounded-xl text-zinc-400 hover:text-zinc-200 transition-colors flex items-center justify-center gap-1.5 cursor-pointer text-[10px] font-mono uppercase tracking-widest"
+            title={isSidebarExpanded ? "Collapse Sidebar Menu" : "Expand Sidebar Menu"}
+          >
+            {isSidebarExpanded ? (
+              <>
+                <ChevronLeft className="w-4 h-4 shrink-0 text-emerald-400" />
+                <span>COLLAPSE OS</span>
+              </>
+            ) : (
+              <ChevronRight className="w-4 h-4 shrink-0 text-emerald-400 animate-pulse" />
+            )}
+          </button>
+        </div>
+      </aside>
+
+      {/* 2. MOBILE FLOATING GLASS SLIDE-OUT DRAWER (MOBILE VIEW ONLY) */}
+      {mobileMenuOpen && (
+        <div className="lg:hidden fixed inset-0 z-50 flex">
+          {/* Backdrop glass overlay */}
+          <div 
+            className="fixed inset-0 bg-zinc-950/70 backdrop-blur-md transition-opacity"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          
+          <aside className="relative flex flex-col w-72 max-w-xs bg-zinc-950 border-r border-zinc-900 h-full p-4 space-y-4 animate-fade-in z-50 text-left">
+            <div className="flex items-center justify-between pb-3 border-b border-zinc-900">
+              <div className="flex items-center gap-2.5">
+                <div className="p-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg text-emerald-400">
+                  <Sprout className="w-4 h-4" />
+                </div>
+                <span className="font-sans text-xs font-bold uppercase tracking-wider text-zinc-100">AgroSensiX Mobile</span>
+              </div>
+              <button 
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-1 bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 rounded-lg text-zinc-400"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <nav className="flex-1 space-y-1 overflow-y-auto">
+              {navLinks.map((link) => {
+                const Icon = link.icon;
+                const isActive = currentPage === link.page;
+                return (
+                  <button
+                    key={link.page}
+                    onClick={() => {
+                      setCurrentPage(link.page);
+                      setMobileMenuOpen(false);
+                      window.scrollTo({ top: 0, behavior: "smooth" });
+                    }}
+                    className={`w-full px-3 py-2.5 rounded-xl transition-colors flex items-center gap-3 border text-left cursor-pointer ${
+                      isActive
+                        ? "bg-emerald-950/40 text-emerald-400 border-emerald-900/60 font-semibold"
+                        : "text-zinc-400 hover:text-zinc-200 border-transparent"
+                    }`}
+                  >
+                    <Icon className="w-4 h-4 shrink-0" />
+                    <div className="truncate">
+                      <p className="text-xs font-sans font-bold leading-none">{link.label}</p>
+                      <p className="text-[9px] font-sans text-zinc-500 mt-1 leading-none">{link.desc}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </nav>
+
+            <div className="pt-3 border-t border-zinc-900 space-y-2">
+              {loggedInUser && (
+                <div className="p-2 bg-zinc-900/40 rounded-lg flex items-center gap-2 font-mono text-[9px] text-zinc-400 uppercase truncate">
+                  <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="truncate">{loggedInUser}</span>
+                </div>
+              )}
+              <button
+                onClick={handleSignOut}
+                className="w-full py-2 bg-red-950/10 hover:bg-red-950/20 border border-red-900/20 text-red-400 rounded-xl text-xs font-sans font-bold uppercase flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                Sign Out Session
+              </button>
+            </div>
+          </aside>
+        </div>
+      )}
+
+      {/* 3. MAIN WORKSPACE / CONTENT VIEWPORT SPLIT PANEL */}
+      <div className="flex-1 flex flex-col min-w-0 min-h-screen relative">
         
         {/* Dynamic ambient radial lighting and premium grid overlay */}
         <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(16,185,129,0.015)_1px,transparent_1px),linear-gradient(to_bottom,rgba(16,185,129,0.015)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none" />
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[350px] bg-emerald-500/5 rounded-full blur-[120px] pointer-events-none" />
         
-        {/* Platform Header / Floating glassmorphic Navbar */}
-        <header className="sticky top-0 z-40 bg-[var(--bg-navbar)] backdrop-blur-xl border-b border-zinc-900/60 p-4 shadow-sm">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          
-          {/* Logo Name & Sprout */}
-          <div className="flex items-center gap-3 cursor-pointer group" onClick={() => setCurrentPage(NavigationPage.HOME)}>
-            <div className="p-2 bg-emerald-500/10 border border-emerald-500/20 group-hover:border-emerald-500/40 rounded-xl text-emerald-400 transition-all duration-300 shadow-[0_0_15px_rgba(16,185,129,0.1)]">
-              <Sprout className="w-5 h-5 shrink-0 group-hover:scale-110 transition-transform duration-300" />
-            </div>
-            <div>
-              <span className="font-sans text-sm font-bold tracking-wider text-zinc-100 block leading-none">
-                AgroSensiX
-              </span>
-              <span className="text-[9px] font-mono text-zinc-500 uppercase block tracking-widest mt-1">
-                Smart Farming Platform
-              </span>
-            </div>
-          </div>
-
-          {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-1.5">
-            {navLinks.map((link) => {
-              const Icon = link.icon;
-              const isActive = currentPage === link.page;
-              return (
-                <button
-                  key={link.page}
-                  onClick={() => {
-                    setCurrentPage(link.page);
-                    setMobileMenuOpen(false);
-                    window.scrollTo({ top: 0, behavior: "smooth" });
-                  }}
-                  className={`px-3.5 py-2 text-xs font-mono rounded-lg transition-all duration-300 uppercase flex items-center gap-1.5 cursor-pointer border ${
-                    isActive
-                      ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30 font-semibold shadow-[0_0_12px_rgba(16,185,129,0.05)]"
-                      : "text-zinc-500 hover:text-zinc-300 hover:bg-zinc-900/30 border-transparent"
-                  }`}
-                >
-                  <Icon className="w-3.5 h-3.5 shrink-0" />
-                  {link.label.split(" ")[0]} 
-                </button>
-              );
-            })}
-          </nav>
-
-          {/* Right Action Widgets (Authenticated Profile Badges + Log Out + Theme Mode Toggles) */}
-          <div className="hidden md:flex items-center gap-3">
-            {/* Network Offline Simulation Toggle */}
-            <button
-              onClick={() => setForceOffline(!forceOffline)}
-              className={`px-3.5 py-2.5 rounded-xl border font-mono text-[9.5px] uppercase tracking-wider transition-all duration-300 flex items-center gap-1.5 cursor-pointer shadow-sm ${
-                forceOffline
-                  ? "bg-amber-950/30 border-amber-500/40 text-amber-400 hover:bg-amber-950/50 hover:border-amber-500/60 font-semibold"
-                  : "bg-zinc-950/80 hover:bg-zinc-900 border-zinc-900/60 hover:border-emerald-500/30 text-zinc-400 hover:text-emerald-400"
-              }`}
-              title={forceOffline ? "Re-connect to real Firebase Cloud database" : "Disconnect and simulate full offline operations"}
-            >
-              {forceOffline ? (
-                <>
-                  <WifiOff className="w-3.5 h-3.5 shrink-0 text-amber-500 animate-pulse" />
-                  <span>SIM_OFFLINE</span>
-                </>
-              ) : !isOnline ? (
-                <>
-                  <WifiOff className="w-3.5 h-3.5 shrink-0 text-amber-500" />
-                  <span>OFFLINE</span>
-                </>
-              ) : (
-                <>
-                  <Wifi className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
-                  <span>ONLINE</span>
-                </>
-              )}
-            </button>
-
-            {/* Theme Toggle Button */}
-            <button
-              id="theme-toggle-desktop"
-              onClick={toggleTheme}
-              className="p-2.5 bg-zinc-950/80 hover:bg-zinc-900 border border-zinc-900/60 hover:border-emerald-500/30 rounded-xl text-zinc-450 hover:text-emerald-400 transition-all duration-300 cursor-pointer shadow-sm flex items-center justify-center gap-2 hover:shadow-[0_0_12px_rgba(16,185,129,0.08)]"
-              title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
-            >
-              {theme === 'light' ? (
-                <>
-                  <span className="text-sm select-none" role="img" aria-label="Sun">☀️</span>
-                  <span className="text-[10px] font-mono uppercase tracking-wider hidden xl:inline">Light Mode</span>
-                </>
-              ) : (
-                <>
-                  <span className="text-sm select-none" role="img" aria-label="Moon">🌙</span>
-                  <span className="text-[10px] font-mono uppercase tracking-wider hidden xl:inline">Dark Mode</span>
-                </>
-              )}
-            </button>
-
-            {loggedInUser ? (
-              <>
-                <div className="px-3.5 py-2 bg-zinc-950/80 border border-zinc-900/60 rounded-xl flex items-center gap-2 font-mono text-[9.5px] tracking-wider text-zinc-400 uppercase select-none max-w-xs truncate shadow-inner">
-                  <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 animate-pulse" />
-                  ADMINISTRATOR: {loggedInUser.length > 25 ? `${loggedInUser.substring(0, 22)}...` : loggedInUser}
-                </div>
-                <button
-                  onClick={handleSignOut}
-                  className="p-2 hover:bg-red-950/20 rounded-xl text-zinc-500 hover:text-red-400 border border-zinc-900/40 hover:border-red-900/50 transition-all duration-300 cursor-pointer shadow-sm animate-fade-in"
-                  title="Log out platform session"
-                >
-                  <LogOut className="w-4 h-4 shrink-0" />
-                </button>
-              </>
-            ) : (
-              <button
-                onClick={() => {
-                  setCurrentPage(NavigationPage.DASHBOARD);
-                  window.scrollTo(0, 0);
-                }}
-                className="px-5 py-2.5 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-zinc-950 font-sans font-bold text-xs uppercase tracking-widest rounded-xl transition-all duration-300 hover:shadow-cyan-950/20 hover:-translate-y-0.5 cursor-pointer select-none active:scale-95 text-center px-6 animate-fade-in"
-              >
-                Launch OS
-              </button>
-            )}
-          </div>
-
-          {/* Responsive Mobile Menu Trigger Switches with Theme Toggle */}
-          <div className="flex lg:hidden items-center gap-2">
-            {/* Theme Toggle Button for Mobile */}
-            <button
-              id="theme-toggle-mobile"
-              onClick={toggleTheme}
-              className="p-2 text-zinc-400 hover:text-emerald-500 border border-zinc-950 rounded-lg bg-zinc-950/40"
-              title={theme === 'dark' ? "Switch to Light Mode" : "Switch to Dark Mode"}
-            >
-              {theme === 'light' ? '☀️' : '🌙'}
-            </button>
-            <button
-              onClick={handleSignOut}
-              className="p-2 text-zinc-400 hover:text-red-400 focus:outline-none"
-              title="Sign Out Session"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 text-zinc-400 hover:text-zinc-200 focus:outline-none border border-zinc-900 rounded-lg bg-zinc-950/40"
-            >
-              {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-            </button>
-          </div>
-
-        </div>
-
-        {/* Mobile Dropdown Menu */}
-        {mobileMenuOpen && (
-          <div className="lg:hidden mt-3 pt-3 border-t border-zinc-900 max-w-7xl mx-auto space-y-1 font-mono uppercase text-xs">
-            {navLinks.map((link) => {
-              const Icon = link.icon;
-              const isActive = currentPage === link.page;
-              return (
-                <button
-                  key={link.page}
-                  onClick={() => {
-                    setCurrentPage(link.page);
-                    setMobileMenuOpen(false);
-                    window.scrollTo(0, 0);
-                  }}
-                  className={`w-full text-left px-3 py-2.5 rounded-lg flex items-center gap-2 ${
-                    isActive
-                      ? "bg-emerald-950/40 text-emerald-400 border border-emerald-900/60 font-semibold"
-                      : "text-zinc-550 hover:text-zinc-200 hover:bg-zinc-900/30"
-                  }`}
-                >
-                  <Icon className="w-4 h-4 shrink-0" />
-                  {link.label}
-                </button>
-              );
-            })}
+        {/* Platform Floating Header / Glassmorphic Action Navbar */}
+        <header className="sticky top-0 z-30 bg-[var(--bg-navbar)] backdrop-blur-xl border-b border-zinc-900/60 p-4 shadow-sm shrink-0">
+          <div className="w-full flex items-center justify-between">
             
-            {/* Mobile Network Offline Simulation Toggle */}
-            <div className="pt-2.5 mt-2.5 border-t border-zinc-900/60">
+            {/* Header Title Information Context */}
+            <div className="flex items-center gap-3">
+              {/* Mobile Burger Open Trigger (Only shown on LG hidden and down) */}
+              <button
+                onClick={() => setMobileMenuOpen(true)}
+                className="lg:hidden p-2 text-zinc-400 hover:text-zinc-200 focus:outline-none border border-zinc-900 rounded-xl bg-zinc-950/40 cursor-pointer"
+              >
+                <Menu className="w-4 h-4" />
+              </button>
+
+              <div className="text-left">
+                <span className="text-[10px] font-mono text-emerald-400 uppercase tracking-widest block font-bold">
+                  {currentPage === NavigationPage.HOME ? "SYS_STATUS: READY" : `MODULE: ${currentPage?.toUpperCase()}`}
+                </span>
+                <h1 className="font-sans text-sm md:text-base font-bold tracking-tight text-zinc-100 flex items-center gap-2 mt-0.5 select-none leading-none">
+                  {navLinks.find((l) => l.page === currentPage)?.label || "Agricultural Operating System"}
+                  <span className="text-zinc-550 font-normal">|</span>
+                  <span className="text-[10px] font-sans font-medium text-zinc-450 hidden sm:inline">
+                    {navLinks.find((l) => l.page === currentPage)?.desc || "AgriTech precision hub"}
+                  </span>
+                </h1>
+              </div>
+            </div>
+
+            {/* Header Actions Panel (No light togglers, strictly system session status & networks) */}
+            <div className="flex items-center gap-3">
+              {/* Force Offline Simulation status badge */}
               <button
                 onClick={() => setForceOffline(!forceOffline)}
-                className={`w-full px-3 py-3 rounded-lg flex items-center justify-between text-left font-mono ${
+                className={`px-3 py-2.5 rounded-xl border font-mono text-[9.5px] uppercase tracking-wider transition-all duration-300 flex items-center gap-1.5 cursor-pointer shadow-sm ${
                   forceOffline
-                    ? "bg-amber-950/20 text-amber-400 border border-amber-900/40"
-                    : "bg-zinc-950/40 text-zinc-400 border border-zinc-900"
+                    ? "bg-amber-950/30 border-amber-500/40 text-amber-400 hover:bg-amber-950/50 hover:border-amber-500/60 font-semibold"
+                    : "bg-zinc-950/80 hover:bg-zinc-900 border-zinc-900/60 hover:border-emerald-500/30 text-zinc-400 hover:text-emerald-400"
                 }`}
+                title={forceOffline ? "Re-connect to real Firebase Cloud database" : "Disconnect and simulate full offline operations"}
               >
-                <span className="flex items-center gap-2">
-                  {forceOffline || !isOnline ? <WifiOff className="w-4 h-4 shrink-0 text-amber-500 animate-pulse" /> : <Wifi className="w-4 h-4 shrink-0 text-emerald-400" />}
-                  NETWORK STATUS
-                </span>
-                <span className="text-[10px] bg-zinc-900/80 px-2 py-0.5 rounded-md font-bold">
-                  {forceOffline ? "SIM_OFFLINE" : !isOnline ? "DEVICE OFFLINE" : "ONLINE CONNECTED"}
-                </span>
+                {forceOffline ? (
+                  <>
+                    <WifiOff className="w-3.5 h-3.5 shrink-0 text-amber-500 animate-pulse" />
+                    <span className="hidden sm:inline">SIM_OFFLINE</span>
+                  </>
+                ) : !isOnline ? (
+                  <>
+                    <WifiOff className="w-3.5 h-3.5 shrink-0 text-amber-500" />
+                    <span>DEVICE_OFFLINE</span>
+                  </>
+                ) : (
+                  <>
+                    <Wifi className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
+                    <span className="hidden sm:inline">ONLINE_CONNECTED</span>
+                  </>
+                )}
+              </button>
+
+              {/* Administrator Session Status Profile / Shortcut */}
+              {loggedInUser ? (
+                <>
+                  <div className="hidden md:flex px-3 py-2.5 bg-zinc-950/80 border border-zinc-900/60 rounded-xl items-center gap-2 font-mono text-[9px] tracking-wider text-zinc-400 uppercase select-none max-w-xs truncate shadow-inner">
+                    <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+                    SYS_ADMIN: {loggedInUser.length > 20 ? `${loggedInUser.substring(0, 17)}...` : loggedInUser}
+                  </div>
+                  
+                  {/* Settings Page Button */}
+                  <button
+                    onClick={() => {
+                      setCurrentPage(NavigationPage.SETTINGS);
+                      window.scrollTo(0, 0);
+                    }}
+                    className={`p-2.5 rounded-xl border transition-all duration-300 cursor-pointer flex items-center ${
+                      currentPage === NavigationPage.SETTINGS
+                        ? "bg-emerald-500/10 border-emerald-500/35 text-emerald-400"
+                        : "bg-zinc-950/80 hover:bg-zinc-900 border-zinc-900/60 hover:border-emerald-500/30 text-zinc-400 hover:text-emerald-400"
+                    }`}
+                    title="Open OS System Settings"
+                  >
+                    <Settings className="w-4 h-4 text-zinc-400 group-hover:text-emerald-400 shrink-0" />
+                  </button>
+
+                  {/* Sign out */}
+                  <button
+                    onClick={handleSignOut}
+                    className="p-2.5 hover:bg-red-950/20 rounded-xl text-zinc-500 hover:text-red-400 border border-zinc-900/40 hover:border-red-900/50 transition-all duration-300 cursor-pointer shadow-sm"
+                    title="Log out platform session"
+                  >
+                    <LogOut className="w-4 h-4 shrink-0" />
+                  </button>
+                </>
+              ) : (
+                <button
+                  onClick={() => {
+                    setCurrentPage(NavigationPage.SETTINGS);
+                    window.scrollTo(0, 0);
+                  }}
+                  className="px-4 py-2.5 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-450 hover:to-cyan-450 text-zinc-950 font-sans font-bold text-[10px] uppercase tracking-widest rounded-xl transition-all duration-300 hover:shadow-cyan-950/20 hover:-translate-y-0.5 cursor-pointer select-none active:scale-95 text-center px-4 animate-fade-in"
+                >
+                  START OS
+                </button>
+              )}
+            </div>
+
+          </div>
+        </header>
+
+        {/* Main Core Section Content Viewport bounds */}
+        <main className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-6 pb-20 relative">
+          
+          {/* Dynamic Water Pump manual pulse warning overlay banner */}
+          {pump.pulsingTimerSec > 0 && (
+            <div className="mb-6 bg-[#081e24] border border-cyan-800/40 text-cyan-300 p-3.5 pr-12 rounded-2xl text-xs font-mono flex items-center justify-between animate-pulse relative shadow-lg">
+              <div className="flex items-center gap-2.5">
+                <Activity className="w-4 h-4 animate-spin text-cyan-400" />
+                <span>WATER OVERRIDE ONGOING (CYCLES IN HOUSE 14): {pump.pulsingTimerSec}s SECONDS RUN TIME REMAINING.</span>
+              </div>
+              <button
+                onClick={() => {
+                  updateFirestorePump({
+                    status: "standby",
+                    flowRateLpm: 0,
+                    pressureBar: 0,
+                    currentMode: "biological",
+                    pulsingTimerSec: 0
+                  });
+                }}
+                className="absolute right-3.5 top-2.5 bg-cyan-950 hover:bg-cyan-900 border border-cyan-700/60 px-2 py-1 text-[9px] uppercase rounded-lg text-cyan-200 block transition-colors cursor-pointer"
+              >
+                STOP FLOW
               </button>
             </div>
-          </div>
-        )}
-      </header>
+          )}
 
-      {/* Main Core Section Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 md:p-6 pb-20 relative">
-        {/* Dynamic Water Pump manual pulse banner overlay if currently pulsing */}
-        {pump.pulsingTimerSec > 0 && (
-          <div className="mb-6 bg-[#081e24] border border-cyan-800/40 text-cyan-300 p-3.5 pr-12 rounded-xl text-xs font-mono flex items-center justify-between animate-pulse relative">
-            <div className="flex items-center gap-2.5">
-              <Activity className="w-4 h-4 animate-spin text-cyan-400" />
-              <span>WATER OVERRIDE ACTIVE (GREENHOUSE 14): {pump.pulsingTimerSec}s SECONDS REMAINING.</span>
+          {renderActiveView()}
+        </main>
+
+        {/* Smart Farming Footer Status Rail */}
+        <footer className="border-t border-zinc-900/80 bg-[var(--bg-footer)] backdrop-blur-md py-3 px-4 text-center text-[10px] font-mono text-zinc-550 select-none sticky bottom-0 z-30 shrink-0">
+          <div className="w-full flex flex-col md:flex-row md:items-center justify-between gap-2.5">
+            <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 uppercase tracking-wider text-zinc-650">
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Greenhouse G14 [nominal]
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Orchard Hub 7G [nominal]
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                Solar power harvest: nominal (4.8 kW)
+              </span>
             </div>
-            <button
-              onClick={() => {
-                // Cancel ongoing pump pulse on Firestore
-                updateFirestorePump({
-                  status: "standby",
-                  flowRateLpm: 0,
-                  pressureBar: 0,
-                  currentMode: "biological",
-                  pulsingTimerSec: 0
-                });
-              }}
-              className="absolute right-3.5 top-3 bg-cyan-950 hover:bg-cyan-900 border border-cyan-700/60 p-1 text-[9.5px] uppercase rounded text-cyan-200 block transition-colors cursor-pointer"
-            >
-              STOP WATER
-            </button>
-          </div>
-        )}
 
-        {renderActiveView()}
-      </main>
-
-      {/* Smart Farming Footer Status Rail */}
-      <footer className="border-t border-zinc-900 bg-[var(--bg-footer)] backdrop-blur-md py-3 px-4 text-center text-[10px] font-mono text-zinc-550 select-none sticky bottom-0 z-30">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-2.5">
-          <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 uppercase tracking-wider text-zinc-650">
-            <span className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Greenhouse 14 Connection [nominal]
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Orchard Hub 7 Connection [nominal]
-            </span>
-            <span className="flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-              Solar power level: ok
-            </span>
+            <div className="flex items-center justify-center gap-1.5 text-[9.5px] text-zinc-500 uppercase font-semibold">
+              <Calendar className="w-3.5 h-3.5 text-zinc-600" />
+              <span>{currentUtcTime}</span>
+            </div>
           </div>
-
-          <div className="flex items-center justify-center gap-1 text-[9.5px] text-zinc-500 uppercase">
-            <Calendar className="w-3.5 h-3.5 text-zinc-650" />
-            <span className="font-semibold">{currentUtcTime}</span>
-          </div>
-        </div>
-      </footer>
+        </footer>
 
       </div>
     </div>
