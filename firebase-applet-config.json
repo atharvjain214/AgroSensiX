@@ -1,9 +1,10 @@
 {
-  "projectId": "impactful-citron-7skkt",
-  "appId": "1:609687313293:web:cf8ebee9bc5eac9a913bc4",
-  "apiKey": "AIzaSyBmIR1X8uLsbsbdShWTlVGU5gPwp4r9Pzk",
-  "authDomain": "impactful-citron-7skkt.firebaseapp.com",
-  "storageBucket": "impactful-citron-7skkt.firebasestorage.app",
-  "messagingSenderId": "609687313293",
-  "measurementId": ""
+  "projectId": "agrosensix",
+  "appId": "1:754188887676:web:4f29e45bf584ca1ea54bf9",
+  "apiKey": "AIzaSyCIubhiNmRS7o-TwsXB4NQjTGYsjjEbZ6s",
+  "authDomain": "agrosensix.firebaseapp.com",
+  "firestoreDatabaseId": "(default)",
+  "storageBucket": "agrosensix.firebasestorage.app",
+  "messagingSenderId": "754188887676",
+  "measurementId": "G-X5TVH1TQ33"
 }
