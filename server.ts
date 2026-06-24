@@ -3,6 +3,27 @@ import path from "path";
 import dotenv from "dotenv";
 import { GoogleGenAI } from "@google/genai";
 import { createServer as createViteServer } from "vite";
+import fs from "fs";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+
+import { initializeApp as initFirebaseApp } from "firebase/app";
+import { initializeFirestore, collection, addDoc, getDocs, query, where, doc, getDoc, setDoc } from "firebase/firestore";
+
+// Load Firebase Config
+let firebaseDb: any = null;
+try {
+  const configRaw = fs.readFileSync(path.join(process.cwd(), "firebase-applet-config.json"), "utf8");
+  const firebaseConfig = JSON.parse(configRaw);
+  const firebaseApp = initFirebaseApp(firebaseConfig, "server-app");
+  const databaseId = firebaseConfig.firestoreDatabaseId || "ai-studio-e28a9b8f-4bef-4dd3-aece-798c6c2171af";
+  firebaseDb = initializeFirestore(firebaseApp, {}, databaseId);
+  console.log(`Firebase initialized on server successfully using db: ${databaseId}`);
+} catch (e) {
+  console.error("Failed to initialize Firebase on server. Please check firebase-applet-config.json", e);
+}
+
+const JWT_SECRET = process.env.JWT_SECRET || "super-secure-agrosensix-secret-key-2026";
 
 // Load environment variables
 dotenv.config();
@@ -398,6 +419,150 @@ app.post("/api/gemini/chat", async (req, res) => {
     }
     res.write("data: [DONE]\n\n");
     res.end();
+  }
+});
+
+// Authentication Endpoints
+
+app.post("/api/auth/register", async (req, res) => {
+  try {
+    if (!firebaseDb) {
+      return res.status(500).json({ error: "Database not configured." });
+    }
+
+    const { fullName, email, password, role } = req.body;
+
+    if (!fullName || !email || !password) {
+      return res.status(400).json({ error: "Full name, email, and password are required." });
+    }
+
+    // Check if user already exists
+    const usersRef = collection(firebaseDb, "users");
+    const q = query(usersRef, where("email", "==", email.toLowerCase()));
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+      return res.status(400).json({ error: "Email already exists. Please login." });
+    }
+
+    // Hash the password
+    const salt = await bcrypt.genSalt(12);
+    const passwordHash = await bcrypt.hash(password, salt);
+
+    // Create user document with pre-generated ID
+    const newDocRef = doc(usersRef);
+    const now = new Date().toISOString();
+    const newUser = {
+      uid: newDocRef.id,
+      email: email.toLowerCase(),
+      fullName,
+      role: role || "Farmer",
+      passwordHash, // Storing only the hash
+      createdAt: now,
+      updatedAt: now,
+      lastLogin: now,
+      profileImage: "",
+      accountStatus: "active",
+      emailVerified: false,
+    };
+
+    await setDoc(newDocRef, newUser);
+
+    // Generate JWT
+    const token = jwt.sign(
+      { uid: newDocRef.id, email: newUser.email, role: newUser.role, fullName: newUser.fullName },
+      JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    res.status(201).json({
+      success: true,
+      token,
+      user: {
+        uid: newDocRef.id,
+        email: newUser.email,
+        fullName: newUser.fullName,
+        role: newUser.role,
+      }
+    });
+
+  } catch (error: any) {
+    console.error("Registration error:", error);
+    res.status(500).json({ error: "Failed to register user. Please try again." });
+  }
+});
+
+app.post("/api/auth/login", async (req, res) => {
+  try {
+    if (!firebaseDb) {
+      return res.status(500).json({ error: "Database not configured." });
+    }
+
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required." });
+    }
+
+    // Find user by email
+    const usersRef = collection(firebaseDb, "users");
+    const q = query(usersRef, where("email", "==", email.toLowerCase()));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      return res.status(401).json({ error: "Invalid email or password." });
+    }
+
+    const userDoc = querySnapshot.docs[0];
+    const userData = userDoc.data();
+
+    // Compare password with hash
+    const isMatch = await bcrypt.compare(password, userData.passwordHash);
+
+    if (!isMatch) {
+      return res.status(401).json({ error: "Invalid email or password." });
+    }
+
+    // Update lastLogin
+    const now = new Date().toISOString();
+    await setDoc(doc(firebaseDb, "users", userDoc.id), { lastLogin: now }, { merge: true });
+
+    // Generate JWT
+    const token = jwt.sign(
+      { uid: userDoc.id, email: userData.email, role: userData.role, fullName: userData.fullName },
+      JWT_SECRET,
+      { expiresIn: "7d" }
+    );
+
+    res.json({
+      success: true,
+      token,
+      user: {
+        uid: userDoc.id,
+        email: userData.email,
+        fullName: userData.fullName,
+        role: userData.role,
+      }
+    });
+
+  } catch (error: any) {
+    console.error("Login error:", error);
+    res.status(500).json({ error: "Failed to login. Please try again." });
+  }
+});
+
+app.get("/api/auth/me", (req, res) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    return res.status(401).json({ error: "No token provided." });
+  }
+
+  const token = authHeader.split(" ")[1];
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    res.json({ success: true, user: decoded });
+  } catch (error) {
+    res.status(401).json({ error: "Invalid or expired token." });
   }
 });
 

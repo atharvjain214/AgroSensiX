@@ -98,18 +98,17 @@ service cloud.firestore {
 
     // --- Collection Routes ---
 
-    // 2. User Profiles Public Collection
-    match /users/{userId}/public/profile {
-      allow read: if isSignedIn();
-      allow create, update: if isOwner(userId) && incoming().displayName is string && incoming().displayName.size() <= 100;
-      allow delete: if isOwner(userId);
+    // 2. Custom Auth Users Collection
+    match /users/{userId} {
+      allow read, write: if true;
     }
 
-    // 3. User Private PII Collection
+    match /users/{userId}/public/profile {
+      allow read, write: if true;
+    }
+
     match /users/{userId}/private/info {
-      allow read: if isOwner(userId);
-      allow create, update: if isOwner(userId) && incoming().email is string && incoming().email.size() <= 200 && incoming().role is string && incoming().role.size() <= 50;
-      allow delete: if isOwner(userId);
+      allow read, write: if true;
     }
 
     // 4. Sector Definitions

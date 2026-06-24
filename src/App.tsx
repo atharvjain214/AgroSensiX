@@ -242,32 +242,44 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // Listen to live Firebase Auth state changes
+  // Custom JWT Session Auto-restoration
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-      if (firebaseUser) {
-        // Authenticated Session detected!
-        setIsBypassMode(false);
-        const parsedName = firebaseUser.displayName || firebaseUser.email || "Certified Agronomist";
-        setLoggedInUser(parsedName);
-        
-        // Dynamic DB self-healing check: seed the database config collections if starting empty (only if online)
-        if (!forceOffline && navigator.onLine) {
-          await seedDatabaseIfEmpty();
+    const token = localStorage.getItem("agrosensix_auth_token");
+    if (token) {
+      // Verify token with backend
+      fetch("/api/auth/me", {
+        headers: {
+          "Authorization": `Bearer ${token}`
         }
-        
-        // After log in, redirect to telemetries grid as primary dashboard
-        setCurrentPage(NavigationPage.DASHBOARD);
-      } else {
-        // No session found, redirect to login page unless we are in the custom secure local bypass session or offline mode
-        if (!isLocalOnly) {
-          setLoggedInUser(null);
+      })
+      .then(res => res.json())
+      .then(async data => {
+        if (data.success && data.user) {
+          setIsBypassMode(false);
+          setLoggedInUser(data.user.fullName || data.user.email);
+          localStorage.setItem("agrosensix_cached_user", data.user.fullName || data.user.email);
+          
+          if (!forceOffline && navigator.onLine) {
+            await seedDatabaseIfEmpty();
+          }
+        } else {
+          // Token expired or invalid
+          localStorage.removeItem("agrosensix_auth_token");
+          if (!isLocalOnly) {
+            setLoggedInUser(null);
+            localStorage.removeItem("agrosensix_cached_user");
+          }
         }
+      })
+      .catch(err => {
+        console.error("Token verification failed:", err);
+      });
+    } else {
+      if (!isLocalOnly) {
+        setLoggedInUser(null);
       }
-    });
-
-    return () => unsubscribe();
-  }, [isBypassMode, loggedInUser, forceOffline, isOnline]);
+    }
+  }, [isLocalOnly, forceOffline]);
 
   // Set up live Firestore realtime snapshot listeners to synchronize client views seamlessly
   useEffect(() => {
@@ -627,16 +639,21 @@ export default function App() {
     setCurrentPage(NavigationPage.DASHBOARD);
   };
 
-  // Log Out out of Firebase Auth
+  // Log Out out of Firebase Auth and Custom JWT
   const handleSignOut = async () => {
     try {
-      await signOut(auth);
-      setIsBypassMode(false);
-      setLoggedInUser(null);
-      setCurrentPage(NavigationPage.HOME);
+      await signOut(auth); // Still call it just in case Google Auth was used previously
     } catch (err) {
-      console.error("Agronomist session log out failed:", err);
+      console.warn("Firebase Auth sign out:", err);
     }
+    
+    // Clear custom auth tokens
+    localStorage.removeItem("agrosensix_auth_token");
+    localStorage.removeItem("agrosensix_cached_user");
+    
+    setIsBypassMode(false);
+    setLoggedInUser(null);
+    setCurrentPage(NavigationPage.HOME);
   };
 
   // Render the current active view content
