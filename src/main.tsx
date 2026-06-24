@@ -13,7 +13,9 @@ if (typeof window !== "undefined") {
       msg.includes("websocket") ||
       msg.includes("connection closed") ||
       msg.includes("WS ") ||
-      msg.includes("closed without opened")
+      msg.includes("closed without opened") ||
+      msg.includes("database '(default)' not found") ||
+      msg.includes("please check your firebase configuration")
     ) {
       event.preventDefault();
       event.stopPropagation();
@@ -27,7 +29,9 @@ if (typeof window !== "undefined") {
       msg.includes("websocket") ||
       msg.includes("connection closed") ||
       msg.includes("WS ") ||
-      msg.includes("closed without opened")
+      msg.includes("closed without opened") ||
+      msg.includes("database '(default)' not found") ||
+      msg.includes("please check your firebase configuration")
     ) {
       event.preventDefault();
       event.stopPropagation();

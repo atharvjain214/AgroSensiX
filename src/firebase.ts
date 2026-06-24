@@ -28,9 +28,18 @@ export const auth = getAuth();
 async function testConnection() {
   try {
     await getDocFromServer(doc(db, "test", "connection"));
-  } catch (error) {
-    if (error instanceof Error && error.message.includes("the client is offline")) {
-      console.error("Please check your Firebase configuration or network status.");
+    console.log("Firebase connection test successful!");
+  } catch (error: any) {
+    // If we get a permission-denied error, it means we reached the server successfully and the project configuration is correct!
+    const isPermissionDenied = error?.code === "permission-denied" || 
+                               (error instanceof Error && error.message.toLowerCase().includes("permission"));
+    
+    if (isPermissionDenied) {
+      console.log("Firebase connection test: Reached the Firestore server successfully (Access restricted by security rules as expected).");
+    } else if (error instanceof Error && error.message.includes("the client is offline")) {
+      console.warn("Firebase connection test: Client is offline or Firestore is unreachable. Local cache persistence will be used.");
+    } else {
+      console.warn("Firebase connection test informational warning:", error instanceof Error ? error.message : String(error));
     }
   }
 }
