@@ -24,6 +24,8 @@ import { LoginView } from "./components/LoginView";
 import { OfflineManager } from "./components/OfflineManager";
 import { ImpactView } from "./components/ImpactView";
 import { SettingsView } from "./components/SettingsView";
+import { GmailView } from "./components/GmailView";
+import { checkAndTriggerEmailAlerts } from "./utils/alertEngine";
 import { offlineStorage } from "./utils/offlineStorage";
 
 // Import Layout Icons
@@ -32,6 +34,7 @@ import {
   LayoutDashboard, 
   LineChart, 
   Bot, 
+  Mail,
   Sliders, 
   Code, 
   HelpCircle, 
@@ -197,14 +200,42 @@ export default function App() {
   }, [isOnline, forceOffline, loggedInUser]);
 
   // Live Timer clocks
-  const [currentUtcTime, setCurrentUtcTime] = useState("");
+  const [currentIstTime, setCurrentIstTime] = useState("");
 
-  // Live clock updates in UTC format
+  // Live clock updates in IST format
   useEffect(() => {
     const updateTime = () => {
       const now = new Date();
-      const utcString = now.toUTCString().replace("GMT", "UTC");
-      setCurrentUtcTime(utcString);
+      try {
+        const parts = new Intl.DateTimeFormat('en-US', {
+          timeZone: 'Asia/Kolkata',
+          weekday: 'short',
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: 'numeric',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true
+        }).formatToParts(now);
+
+        const partMap = new Map(parts.map(p => [p.type, p.value]));
+        
+        const weekday = partMap.get('weekday') || "";
+        const day = partMap.get('day') || "";
+        const month = partMap.get('month') || "";
+        const year = partMap.get('year') || "";
+        const hour = partMap.get('hour') || "";
+        const minute = partMap.get('minute') || "";
+        const second = partMap.get('second') || "";
+        const dayPeriod = partMap.get('dayPeriod') || "";
+
+        setCurrentIstTime(`${weekday}, ${day} ${month} ${year} ${hour}:${minute}:${second} ${dayPeriod} IST`);
+      } catch (e) {
+        // Fallback
+        const fallback = now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata', hour12: true }) + " IST";
+        setCurrentIstTime(fallback);
+      }
     };
     updateTime();
     const interval = setInterval(updateTime, 1000);
@@ -365,6 +396,12 @@ export default function App() {
 
     return () => clearInterval(interval);
   }, [loggedInUser]);
+
+  // Automated email alert dispatcher on biosensor updates
+  useEffect(() => {
+    if (!loggedInUser) return;
+    checkAndTriggerEmailAlerts(sectors, battery, pump);
+  }, [sectors, battery, pump, loggedInUser]);
 
   // Automated pumping countdown timer if manual pulsing active
   useEffect(() => {
@@ -644,6 +681,8 @@ export default function App() {
         return <AnalyticsView />;
       case NavigationPage.AI_ASSISTANT:
         return <AiAssistantView sectors={sectors} battery={battery} pump={pump} />;
+      case NavigationPage.GMAIL:
+        return <GmailView sectors={sectors} battery={battery} pump={pump} />;
       case NavigationPage.IRRIGATION_CONTROL:
         return (
           <IrrigationView 
@@ -696,6 +735,7 @@ export default function App() {
     { page: NavigationPage.DASHBOARD, label: "Farm Intelligence", desc: "Digital twin crop telemetry", icon: Sprout },
     { page: NavigationPage.ANALYTICS, label: "Weather Intelligence", desc: "Barometric environments", icon: Sun },
     { page: NavigationPage.AI_ASSISTANT, label: "AI Assistant Workspace", desc: "Specialist crop advice suite", icon: Bot },
+    { page: NavigationPage.GMAIL, label: "Gmail Alert Center", desc: "Automated warning gateway", icon: Mail },
     { page: NavigationPage.IRRIGATION_CONTROL, label: "Water Intelligence", desc: "Reservoir & eco pump status", icon: Droplets },
     { page: NavigationPage.IMPACT, label: "Our Impact Meter", desc: "Sustainability benchmark logs", icon: Leaf },
     { page: NavigationPage.OFFLINE_HUB, label: "Offline Grid System", desc: "Local database caching", icon: Database },
@@ -1040,7 +1080,7 @@ export default function App() {
 
             <div className="flex items-center justify-center gap-1.5 text-[9.5px] text-zinc-500 uppercase font-semibold">
               <Calendar className="w-3.5 h-3.5 text-zinc-600" />
-              <span>{currentUtcTime}</span>
+              <span>{currentIstTime}</span>
             </div>
           </div>
         </footer>

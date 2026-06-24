@@ -12,13 +12,15 @@ import firebaseConfig from "../firebase-applet-config.json";
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
+const databaseId = (firebaseConfig as any).firestoreDatabaseId || "ai-studio-e28a9b8f-4bef-4dd3-aece-798c6c2171af";
+
 // CRITICAL: The app and dev system will break without explicitly referencing the firestoreDatabaseId.
 // We use initializeFirestore with persistentLocalCache to prevent deprecation warnings and ensure robust offline behavior.
 export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({
     tabManager: persistentMultipleTabManager()
   })
-}, firebaseConfig.firestoreDatabaseId);
+}, databaseId);
 
 export const auth = getAuth();
 

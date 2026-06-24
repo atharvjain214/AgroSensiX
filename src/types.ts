@@ -13,7 +13,8 @@ export enum NavigationPage {
   ARCHITECTURE = "architecture",
   ABOUT = "about",
   SETTINGS = "settings",
-  LOGIN = "login"
+  LOGIN = "login",
+  GMAIL = "gmail"
 }
 
 export interface SensorNode {
