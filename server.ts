@@ -566,6 +566,150 @@ app.get("/api/auth/me", (req, res) => {
   }
 });
 
+// Password Recovery Endpoints
+app.post("/api/auth/recover/send-code", async (req, res) => {
+  try {
+    const { email } = req.body;
+    if (!email) return res.status(400).json({ error: "Email is required." });
+
+    const usersRef = collection(firebaseDb, "users");
+    const q = query(usersRef, where("email", "==", email.toLowerCase()));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      // Don't leak whether the account exists, just say successful for security
+      return res.json({ success: true, message: "If an account exists, a verification code has been sent." });
+    }
+
+    // Generate 6 digit code
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 10 * 60000); // 10 minutes from now
+
+    // Store the code
+    const codesRef = collection(firebaseDb, "recovery_codes");
+    await addDoc(codesRef, {
+      email: email.toLowerCase(),
+      code,
+      createdAt: now.toISOString(),
+      expiresAt: expiresAt.toISOString(),
+      used: false
+    });
+
+    // Output simulated email logic
+    console.log(`
+      [SIMULATED EMAIL DISPATCH]
+      To: ${email}
+      Subject: AgroSensiX Password Recovery Code
+      Body: 
+      Hello,
+
+      Your AgroSensiX password recovery code is:
+      ${code}
+
+      This code will expire in 10 minutes.
+      If you did not request this code, please ignore this email.
+
+      AgroSensiX Security Team
+    `);
+
+    res.json({ success: true, message: "Verification code sent successfully." });
+  } catch (error) {
+    console.error("Send code error:", error);
+    res.status(500).json({ error: "Failed to send verification code." });
+  }
+});
+
+app.post("/api/auth/recover/verify-code", async (req, res) => {
+  try {
+    const { email, code } = req.body;
+    if (!email || !code) return res.status(400).json({ error: "Email and code are required." });
+
+    const codesRef = collection(firebaseDb, "recovery_codes");
+    const q = query(
+      codesRef, 
+      where("email", "==", email.toLowerCase()),
+      where("code", "==", code),
+      where("used", "==", false)
+    );
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      return res.status(400).json({ error: "Invalid or expired verification code." });
+    }
+
+    // Check expiration
+    const docSnap = querySnapshot.docs[0];
+    const codeData = docSnap.data();
+    if (new Date() > new Date(codeData.expiresAt)) {
+      return res.status(400).json({ error: "Verification code has expired." });
+    }
+
+    res.json({ success: true, message: "Code verified successfully." });
+  } catch (error) {
+    console.error("Verify code error:", error);
+    res.status(500).json({ error: "Failed to verify code." });
+  }
+});
+
+app.post("/api/auth/recover/reset-password", async (req, res) => {
+  try {
+    const { email, code, newPassword } = req.body;
+    if (!email || !code || !newPassword) {
+      return res.status(400).json({ error: "Missing required fields." });
+    }
+
+    // Validate the code again
+    const codesRef = collection(firebaseDb, "recovery_codes");
+    const codeQ = query(
+      codesRef, 
+      where("email", "==", email.toLowerCase()),
+      where("code", "==", code),
+      where("used", "==", false)
+    );
+    const codeSnapshot = await getDocs(codeQ);
+
+    if (codeSnapshot.empty) {
+      return res.status(400).json({ error: "Invalid or expired verification code." });
+    }
+    const codeDoc = codeSnapshot.docs[0];
+    if (new Date() > new Date(codeDoc.data().expiresAt)) {
+      return res.status(400).json({ error: "Verification code has expired." });
+    }
+
+    // Find the user
+    const usersRef = collection(firebaseDb, "users");
+    const userQ = query(usersRef, where("email", "==", email.toLowerCase()));
+    const userSnapshot = await getDocs(userQ);
+
+    if (userSnapshot.empty) {
+      return res.status(400).json({ error: "Account not found." });
+    }
+
+    const userDoc = userSnapshot.docs[0];
+
+    // Hash the new password
+    const salt = await bcrypt.genSalt(12);
+    const passwordHash = await bcrypt.hash(newPassword, salt);
+
+    // Update the user
+    await setDoc(doc(firebaseDb, "users", userDoc.id), { 
+      passwordHash,
+      updatedAt: new Date().toISOString()
+    }, { merge: true });
+
+    // Mark code as used
+    await setDoc(doc(firebaseDb, "recovery_codes", codeDoc.id), {
+      used: true
+    }, { merge: true });
+
+    res.json({ success: true, message: "Password changed successfully." });
+  } catch (error) {
+    console.error("Reset password error:", error);
+    res.status(500).json({ error: "Failed to reset password." });
+  }
+});
+
 // Secure server-side validation of the master agronomist passphrase
 app.post("/api/verify-passphrase", (req, res) => {
   const { passphrase } = req.body;

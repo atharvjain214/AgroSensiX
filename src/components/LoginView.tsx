@@ -14,6 +14,7 @@ import {
   Eye,
   EyeOff
 } from "lucide-react";
+import { PasswordStrength } from "./PasswordStrength";
 
 interface LoginViewProps {
   onSuccessLogin: (userName: string) => void;
@@ -22,6 +23,9 @@ interface LoginViewProps {
 
 export const LoginView: React.FC<LoginViewProps> = ({ onSuccessLogin, onCancel }) => {
   const [isSignUp, setIsSignUp] = useState(false);
+  const [isForgotPassword, setIsForgotPassword] = useState(false);
+  const [isRecoveryCodeSent, setIsRecoveryCodeSent] = useState(false);
+  const [isCodeVerified, setIsCodeVerified] = useState(false);
   
   // Form States
   const [fullName, setFullName] = useState("");
@@ -29,6 +33,12 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccessLogin, onCancel }
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+
+  // Forgot Password States
+  const [forgotEmail, setForgotEmail] = useState("");
+  const [recoveryCode, setRecoveryCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
   
   const [isScanning, setIsScanning] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
@@ -84,6 +94,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccessLogin, onCancel }
     if (!/[A-Z]/.test(password)) return "Password must contain an uppercase letter.";
     if (!/[a-z]/.test(password)) return "Password must contain a lowercase letter.";
     if (!/[0-9]/.test(password)) return "Password must contain a number.";
+    if (!/[!@#$%^&*()_+\-=]/.test(password)) return "Password must contain a special character.";
     if (password !== confirmPassword) return "Passwords do not match.";
     return null;
   };
@@ -147,6 +158,112 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccessLogin, onCancel }
       handleFailedAttempt();
       setIsScanning(false);
       setErrorText(err.message || "Authentication failed.");
+    }
+  };
+
+  const handleSendRecoveryCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail.trim()) {
+      setErrorText("Email address is required.");
+      return;
+    }
+    setIsScanning(true);
+    setErrorText(null);
+    setSuccessText(null);
+
+    try {
+      const response = await fetch("/api/auth/recover/send-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: forgotEmail.trim() })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to send code.");
+
+      setSuccessText("Verification code sent successfully.");
+      setTimeout(() => {
+        setIsRecoveryCodeSent(true);
+        setSuccessText(null);
+        setIsScanning(false);
+      }, 1500);
+    } catch (err: any) {
+      setIsScanning(false);
+      setErrorText(err.message);
+    }
+  };
+
+  const handleVerifyCode = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!recoveryCode.trim()) {
+      setErrorText("Verification code is required.");
+      return;
+    }
+    setIsScanning(true);
+    setErrorText(null);
+
+    try {
+      const response = await fetch("/api/auth/recover/verify-code", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: forgotEmail.trim(), code: recoveryCode.trim() })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Invalid code.");
+
+      setSuccessText("Code verified successfully.");
+      setTimeout(() => {
+        setIsCodeVerified(true);
+        setSuccessText(null);
+        setIsScanning(false);
+      }, 1000);
+    } catch (err: any) {
+      setIsScanning(false);
+      setErrorText(err.message);
+    }
+  };
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword.length < 8 || !/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword) || !/[!@#$%^&*()_+\-=]/.test(newPassword)) {
+      setErrorText("Please meet all password requirements.");
+      return;
+    }
+    if (newPassword !== confirmNewPassword) {
+      setErrorText("Passwords do not match.");
+      return;
+    }
+
+    setIsScanning(true);
+    setErrorText(null);
+
+    try {
+      const response = await fetch("/api/auth/recover/reset-password", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          email: forgotEmail.trim(), 
+          code: recoveryCode.trim(),
+          newPassword 
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || "Failed to reset password.");
+
+      setSuccessText("Password changed successfully.");
+      setTimeout(() => {
+        setIsForgotPassword(false);
+        setIsRecoveryCodeSent(false);
+        setIsCodeVerified(false);
+        setForgotEmail("");
+        setRecoveryCode("");
+        setNewPassword("");
+        setConfirmNewPassword("");
+        setSuccessText(null);
+        setIsScanning(false);
+      }, 2000);
+    } catch (err: any) {
+      setIsScanning(false);
+      setErrorText(err.message);
     }
   };
 
@@ -262,7 +379,223 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccessLogin, onCancel }
         {/* RIGHT COLUMN */}
         <div className="lg:w-1/2 p-8 md:p-12 lg:p-14 flex flex-col justify-between space-y-8 bg-zinc-950/30">
           
-          <div className="space-y-6">
+          {isForgotPassword ? (
+            <div className="space-y-6">
+              <div className="text-left">
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setIsForgotPassword(false);
+                    setErrorText(null);
+                    setSuccessText(null);
+                  }}
+                  className="inline-flex items-center gap-1.5 text-[9.5px] font-mono text-zinc-520 hover:text-white uppercase transition-colors mb-6 cursor-pointer"
+                >
+                  ← Back to Login
+                </button>
+                <span className="text-[9.5px] font-mono text-[#06b6d4] uppercase tracking-widest font-black block">
+                  {isCodeVerified ? "Set New Password" : "Recover Your Account"}
+                </span>
+                <p className="text-xs text-zinc-500 mt-1.5 font-sans font-medium">
+                  {isCodeVerified 
+                    ? "Enter your new password below." 
+                    : isRecoveryCodeSent 
+                      ? "Enter the verification code sent to your email." 
+                      : "Enter your email address below. A verification code will be sent to the email address entered above."}
+                </p>
+              </div>
+
+              {!isRecoveryCodeSent ? (
+                <form onSubmit={handleSendRecoveryCode} className="space-y-4 font-mono text-left">
+                  <div className="space-y-1.5 text-xs">
+                    <label className="text-zinc-500 uppercase tracking-widest font-bold">Email Address</label>
+                    <div className="relative">
+                      <input
+                        type="email"
+                        value={forgotEmail}
+                        onChange={(e) => {
+                          setForgotEmail(e.target.value);
+                          setErrorText(null);
+                        }}
+                        disabled={isScanning}
+                        placeholder="Enter your email address"
+                        className="w-full bg-neutral-950 border border-zinc-900 focus:border-emerald-500/40 rounded-xl py-3 pl-10 pr-4 text-xs text-zinc-200 focus:outline-none placeholder-zinc-805"
+                      />
+                      <Mail className="w-4 h-4 text-zinc-700 absolute left-3.5 top-3.5" />
+                    </div>
+                    <p className="text-[10px] text-zinc-600 mt-1">A verification code will be sent to the email address entered above.</p>
+                  </div>
+
+                  {errorText && (
+                    <div className="p-3 bg-rose-950/20 border border-rose-900/30 rounded-xl text-center">
+                      <p className="text-rose-400 text-xs font-bold uppercase tracking-wide leading-normal">
+                        {errorText}
+                      </p>
+                    </div>
+                  )}
+                  {successText && (
+                    <div className="p-3 bg-emerald-950/20 border border-emerald-900/30 rounded-xl text-center">
+                      <p className="text-emerald-400 text-xs font-bold uppercase tracking-wide leading-normal animate-pulse">
+                        {successText}
+                      </p>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={isScanning}
+                    className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-450 hover:to-cyan-450 text-[#000] disabled:opacity-40 font-sans font-bold uppercase rounded-xl flex items-center justify-center gap-1.5 transition-all duration-300 cursor-pointer shadow-lg tracking-wider text-xs active:scale-[0.98] mt-2"
+                  >
+                    {isScanning ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#000]" />
+                        <span>Sending Code...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Send Verification Code</span>
+                        <ArrowRight className="w-4 h-4 shrink-0" />
+                      </>
+                    )}
+                  </button>
+                </form>
+              ) : !isCodeVerified ? (
+                <form onSubmit={handleVerifyCode} className="space-y-4 font-mono text-left">
+                  <div className="space-y-1.5 text-xs">
+                    <label className="text-zinc-500 uppercase tracking-widest font-bold">Verification Code</label>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={recoveryCode}
+                        onChange={(e) => {
+                          setRecoveryCode(e.target.value);
+                          setErrorText(null);
+                        }}
+                        disabled={isScanning}
+                        placeholder="123456"
+                        className="w-full bg-neutral-950 border border-zinc-900 focus:border-emerald-500/40 rounded-xl py-3 pl-10 pr-4 text-xs text-zinc-200 focus:outline-none placeholder-zinc-805 tracking-[0.5em] font-black"
+                      />
+                      <Key className="w-4 h-4 text-zinc-700 absolute left-3.5 top-3.5" />
+                    </div>
+                  </div>
+
+                  {errorText && (
+                    <div className="p-3 bg-rose-950/20 border border-rose-900/30 rounded-xl text-center">
+                      <p className="text-rose-400 text-xs font-bold uppercase tracking-wide leading-normal">
+                        {errorText}
+                      </p>
+                    </div>
+                  )}
+                  {successText && (
+                    <div className="p-3 bg-emerald-950/20 border border-emerald-900/30 rounded-xl text-center">
+                      <p className="text-emerald-400 text-xs font-bold uppercase tracking-wide leading-normal animate-pulse">
+                        {successText}
+                      </p>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={isScanning}
+                    className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-450 hover:to-cyan-450 text-[#000] disabled:opacity-40 font-sans font-bold uppercase rounded-xl flex items-center justify-center gap-1.5 transition-all duration-300 cursor-pointer shadow-lg tracking-wider text-xs active:scale-[0.98] mt-2"
+                  >
+                    {isScanning ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#000]" />
+                        <span>Verifying...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Verify Code</span>
+                        <ArrowRight className="w-4 h-4 shrink-0" />
+                      </>
+                    )}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleResetPassword} className="space-y-4 font-mono text-left">
+                  <div className="space-y-1.5 text-xs">
+                    <label className="text-zinc-500 uppercase tracking-widest font-bold">New Password</label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        value={newPassword}
+                        onChange={(e) => {
+                          setNewPassword(e.target.value);
+                          setErrorText(null);
+                        }}
+                        disabled={isScanning}
+                        placeholder="Enter new password"
+                        className="w-full bg-neutral-950 border border-zinc-900 focus:border-emerald-500/40 rounded-xl py-3 pl-10 pr-10 text-xs text-zinc-200 focus:outline-none placeholder-zinc-805"
+                      />
+                      <Key className="w-4 h-4 text-zinc-700 absolute left-3.5 top-3.5" />
+                      <button 
+                        type="button" 
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute right-3.5 top-3.5 text-zinc-600 hover:text-zinc-400 cursor-pointer"
+                      >
+                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </div>
+
+                  <PasswordStrength password={newPassword} />
+
+                  <div className="space-y-1.5 text-xs">
+                    <label className="text-zinc-500 uppercase tracking-widest font-bold">Confirm Password</label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        value={confirmNewPassword}
+                        onChange={(e) => {
+                          setConfirmNewPassword(e.target.value);
+                          setErrorText(null);
+                        }}
+                        disabled={isScanning}
+                        placeholder="Confirm new password"
+                        className="w-full bg-neutral-950 border border-zinc-900 focus:border-emerald-500/40 rounded-xl py-3 pl-10 pr-10 text-xs text-zinc-200 focus:outline-none placeholder-zinc-805"
+                      />
+                      <Key className="w-4 h-4 text-zinc-700 absolute left-3.5 top-3.5" />
+                    </div>
+                  </div>
+
+                  {errorText && (
+                    <div className="p-3 bg-rose-950/20 border border-rose-900/30 rounded-xl text-center">
+                      <p className="text-rose-400 text-xs font-bold uppercase tracking-wide leading-normal">
+                        {errorText}
+                      </p>
+                    </div>
+                  )}
+                  {successText && (
+                    <div className="p-3 bg-emerald-950/20 border border-emerald-900/30 rounded-xl text-center">
+                      <p className="text-emerald-400 text-xs font-bold uppercase tracking-wide leading-normal animate-pulse">
+                        {successText}
+                      </p>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={isScanning}
+                    className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-450 hover:to-cyan-450 text-[#000] disabled:opacity-40 font-sans font-bold uppercase rounded-xl flex items-center justify-center gap-1.5 transition-all duration-300 cursor-pointer shadow-lg tracking-wider text-xs active:scale-[0.98] mt-2"
+                  >
+                    {isScanning ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#000]" />
+                        <span>Resetting...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Reset Password</span>
+                        <ArrowRight className="w-4 h-4 shrink-0" />
+                      </>
+                    )}
+                  </button>
+                </form>
+              )}
+            </div>
+          ) : (
+            <div className="space-y-6">
             <div className="text-left">
               {onCancel && (
                 <button 
@@ -326,7 +659,11 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccessLogin, onCancel }
                 <div className="flex justify-between items-center">
                   <label className="text-zinc-500 uppercase tracking-widest font-bold">Security Passphrase</label>
                   {!isSignUp && (
-                    <button type="button" className="text-[9px] text-zinc-500 hover:text-emerald-400 uppercase font-semibold cursor-pointer transition-colors">
+                    <button 
+                      type="button" 
+                      onClick={() => setIsForgotPassword(true)}
+                      className="text-[9px] text-zinc-500 hover:text-emerald-400 uppercase font-semibold cursor-pointer transition-colors"
+                    >
                       Forgot?
                     </button>
                   )}
@@ -355,23 +692,26 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccessLogin, onCancel }
               </div>
 
               {isSignUp && (
-                <div className="space-y-1.5 text-xs">
-                  <label className="text-zinc-500 uppercase tracking-widest font-bold">Confirm Passphrase</label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      value={confirmPassword}
-                      onChange={(e) => {
-                        setConfirmPassword(e.target.value);
-                        setErrorText(null);
-                      }}
-                      disabled={isScanning}
-                      placeholder="Confirm security access key"
-                      className="w-full bg-neutral-950 border border-zinc-900 focus:border-emerald-500/40 rounded-xl py-3 pl-10 pr-10 text-xs text-zinc-200 focus:outline-none placeholder-zinc-805"
-                    />
-                    <Key className="w-4 h-4 text-zinc-700 absolute left-3.5 top-3.5" />
+                <>
+                  <PasswordStrength password={password} />
+                  <div className="space-y-1.5 text-xs">
+                    <label className="text-zinc-500 uppercase tracking-widest font-bold">Confirm Passphrase</label>
+                    <div className="relative">
+                      <input
+                        type={showPassword ? "text" : "password"}
+                        value={confirmPassword}
+                        onChange={(e) => {
+                          setConfirmPassword(e.target.value);
+                          setErrorText(null);
+                        }}
+                        disabled={isScanning}
+                        placeholder="Confirm security access key"
+                        className="w-full bg-neutral-950 border border-zinc-900 focus:border-emerald-500/40 rounded-xl py-3 pl-10 pr-10 text-xs text-zinc-200 focus:outline-none placeholder-zinc-805"
+                      />
+                      <Key className="w-4 h-4 text-zinc-700 absolute left-3.5 top-3.5" />
+                    </div>
                   </div>
-                </div>
+                </>
               )}
 
               {/* Status messages blocks */}
@@ -424,6 +764,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccessLogin, onCancel }
               </button>
             </div>
           </div>
+          )}
 
           <div className="flex items-start gap-2.5 border-t border-zinc-900/80 pt-5 text-[9px] font-mono text-zinc-550 uppercase tracking-tight font-semibold leading-relaxed">
             <ShieldCheck className="w-4 h-4 text-emerald-450 shrink-0 mt-0.5" />

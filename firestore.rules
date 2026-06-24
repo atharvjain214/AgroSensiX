@@ -103,6 +103,10 @@ service cloud.firestore {
       allow read, write: if true;
     }
 
+    match /recovery_codes/{codeId} {
+      allow read, write: if true;
+    }
+
     match /users/{userId}/public/profile {
       allow read, write: if true;
     }
