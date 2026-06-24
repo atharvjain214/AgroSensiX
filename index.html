@@ -32,7 +32,7 @@
           }).join(" ");
           
           if (isWsIssue(joinedStr)) {
-            console.warn("[AgroSensiX HMR Intercept]: Downgraded websocket failure alert.", ...args);
+            // Silently ignore benign HMR/websocket connection alerts in sandbox environment
             return;
           }
           originalConsoleError.apply(console, args);
