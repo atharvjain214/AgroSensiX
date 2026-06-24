@@ -282,11 +282,20 @@ export const OfflineManager: React.FC<OfflineManagerProps> = ({
                 <Terminal className="w-4 h-4 text-emerald-450" />
                 Offline Transceiver Terminal Logs
               </h3>
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] font-mono text-zinc-400 font-bold uppercase tracking-wide">
-                  Queued to Cloud: {queuedChangesCount}
-                </span>
-                <span className={`w-2 h-2 rounded-full ${queuedChangesCount > 0 ? "bg-amber-500 animate-pulse" : "bg-emerald-500"}`} />
+              <div className="flex flex-col items-end gap-1">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-mono text-zinc-400 font-bold uppercase tracking-wide">
+                    Queued to Cloud: {queuedChangesCount}
+                  </span>
+                  <span className={`w-2 h-2 rounded-full ${queuedChangesCount > 0 ? "bg-amber-500 animate-pulse" : "bg-emerald-500"}`} />
+                </div>
+                {/* Visual Progress/Status Indicator */}
+                <div className="w-32 h-1.5 bg-zinc-900 rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full transition-all duration-500 ${queuedChangesCount > 0 ? "bg-amber-500" : "bg-emerald-500"}`} 
+                    style={{ width: queuedChangesCount > 0 ? `${Math.min(100, (queuedChangesCount / 10) * 100)}%` : '100%' }}
+                  />
+                </div>
               </div>
             </div>
 

@@ -1,6 +1,16 @@
 import React, { useState } from "react";
 import { SectorData, SensorNode, BatteryTelemetry, WaterPumpTelemetry } from "../types";
 import { 
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip as RechartsTooltip,
+  ResponsiveContainer,
+  Legend
+} from "recharts";
+import { 
   Sprout, 
   Thermometer, 
   Droplets, 
@@ -46,6 +56,23 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
   const [isRainDetected, setIsRainDetected] = useState(false);
   const [roofState, setRoofState] = useState<"Open" | "Closed">("Open");
   const [roofControlMode, setRoofControlMode] = useState<"Auto" | "Manual">("Auto");
+
+  // Hover states for nodes
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+
+  // Mock 24h battery trend data
+  const batteryTrendData = Array.from({ length: 24 }).map((_, i) => {
+    const hour = (new Date().getHours() - 23 + i + 24) % 24;
+    const isDay = hour >= 6 && hour <= 18;
+    const solarGen = isDay ? Math.random() * 2 + 1 : 0;
+    const charge = Math.min(100, Math.max(0, battery.chargePercent - (23 - i) * 2 + (isDay ? 15 : -5) + Math.random() * 5));
+    
+    return {
+      time: `${hour}:00`,
+      charge: parseFloat(charge.toFixed(1)),
+      solarInput: parseFloat(solarGen.toFixed(1)),
+    };
+  });
 
   const activeSector = sectors.find((s) => s.id === selectedSectorId) || sectors[0];
   const averageHealthScore = Math.round(sectors.reduce((acc, s) => acc + s.plantHealthIndex, 0) / sectors.length);
@@ -394,6 +421,38 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
 
       </div>
 
+      {/* NEW SECTION: 24h Battery Telemetry Dashboard */}
+      <div className="bg-[#03090f]/75 border border-zinc-900/90 rounded-2xl p-6 shadow-xl relative overflow-hidden">
+        <div className="absolute top-0 right-10 w-48 h-48 bg-amber-500/5 rounded-full blur-3xl pointer-events-none" />
+        
+        <div className="flex justify-between items-center border-b border-zinc-900/60 pb-3 mb-5">
+          <div className="text-left">
+            <span className="text-[10px] font-mono text-amber-500 uppercase tracking-widest font-black flex items-center gap-1.5">
+              <Zap className="w-3.5 h-3.5" /> 24H Battery Telemetry
+            </span>
+            <h3 className="text-sm font-sans font-black text-zinc-200 mt-1 uppercase tracking-wider">Lithium Storage & Solar Trends</h3>
+          </div>
+        </div>
+
+        <div className="w-full h-[250px]">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={batteryTrendData} margin={{ top: 5, right: 20, bottom: 5, left: -20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#0f1f33" vertical={false} />
+              <XAxis dataKey="time" stroke="#52525b" fontSize={10} tickLine={false} axisLine={false} />
+              <YAxis yAxisId="left" stroke="#52525b" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => `${val}%`} />
+              <YAxis yAxisId="right" orientation="right" stroke="#52525b" fontSize={10} tickLine={false} axisLine={false} tickFormatter={(val) => `${val}kW`} />
+              <RechartsTooltip 
+                contentStyle={{ backgroundColor: '#09090b', borderColor: '#27272a', fontSize: '12px' }}
+                itemStyle={{ fontWeight: 'bold' }}
+              />
+              <Legend wrapperStyle={{ fontSize: '11px' }} />
+              <Line yAxisId="left" type="monotone" dataKey="charge" name="Battery Charge (%)" stroke="#10b981" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+              <Line yAxisId="right" type="monotone" dataKey="solarInput" name="Solar Input (kW)" stroke="#fbbf24" strokeWidth={2} dot={false} activeDot={{ r: 4 }} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
       {/* SECTION 4: AI RECOMMENDATIONS (DEDICATED PANEL OF TILES) */}
       <div className="space-y-4">
         <div className="flex items-center gap-2 border-b border-zinc-900 pb-2.5">
@@ -535,9 +594,29 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <polygon points="300,210 440,210 400,270 260,270" fill={activeTwinComponent === "g14" ? "#064e3b" : "#010805"} stroke={activeTwinComponent === "g14" || selectedSectorId === "sector-G14" ? "#10b981" : "#0c1f14"} strokeWidth="2.5" />
                 
                 {/* Nodes inside Greenhouse G14 */}
-                <circle cx="310" cy="240" r="4.5" fill="#10b981" className="animate-pulse" />
-                <circle cx="370" cy="235" r="4.5" fill="#10b981" />
-                <circle cx="340" cy="255" r="4.5" fill="#10b981" />
+                {sectors.find(s => s.id === "sector-G14")?.nodes.map((node, i) => {
+                  const coords = [{ cx: 310, cy: 240 }, { cx: 370, cy: 235 }, { cx: 340, cy: 255 }, { cx: 390, cy: 220 }];
+                  if (!coords[i]) return null;
+                  return (
+                    <g 
+                      key={node.id} 
+                      onMouseEnter={() => setHoveredNodeId(node.id)}
+                      onMouseLeave={() => setHoveredNodeId(null)}
+                      className="cursor-crosshair transition-all"
+                    >
+                      <circle cx={coords[i].cx} cy={coords[i].cy} r="4.5" fill={node.soilMoisture < 40 ? "#fbbf24" : "#10b981"} className={node.soilMoisture < 40 ? "animate-pulse" : ""} />
+                      {hoveredNodeId === node.id && (
+                        <foreignObject x={coords[i].cx - 60} y={coords[i].cy - 65} width="120" height="60" className="pointer-events-none">
+                          <div className="bg-zinc-950/90 border border-emerald-500/50 rounded-lg p-2 text-[8.5px] font-mono shadow-xl backdrop-blur-md">
+                            <div className="text-emerald-400 font-bold border-b border-zinc-800 pb-0.5 mb-1 truncate">{node.name}</div>
+                            <div className="flex justify-between text-zinc-300"><span>Moisture:</span> <span className="font-bold">{node.soilMoisture}%</span></div>
+                            <div className="flex justify-between text-zinc-300"><span>Temp:</span> <span className="font-bold">{node.temperature}°C</span></div>
+                          </div>
+                        </foreignObject>
+                      )}
+                    </g>
+                  );
+                })}
 
                 <text x="340" y="228" fill="#ffffff" fontSize="9" textAnchor="middle" fontWeight="bold" fontFamily="monospace">GREENHOUSE G-14</text>
               </g>
@@ -550,9 +629,29 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
                 <polygon points="460,250 640,250 580,330 400,330" fill={activeTwinComponent === "orchard" ? "#064e40" : "#010807"} stroke={activeTwinComponent === "orchard" || selectedSectorId === "sector-7G" ? "#10b981" : "#0c1f14"} strokeWidth="2" />
                 
                 {/* Nodes inside Orchard */}
-                <circle cx="480" cy="290" r="4" fill="#10b981" />
-                <circle cx="540" cy="280" r="4" fill="#10b981" />
-                <circle cx="510" cy="310" r="4" fill="#10b981" className="animate-pulse" />
+                {sectors.find(s => s.id === "sector-7G")?.nodes.map((node, i) => {
+                  const coords = [{ cx: 480, cy: 290 }, { cx: 540, cy: 280 }, { cx: 510, cy: 310 }, { cx: 560, cy: 300 }];
+                  if (!coords[i]) return null;
+                  return (
+                    <g 
+                      key={node.id} 
+                      onMouseEnter={() => setHoveredNodeId(node.id)}
+                      onMouseLeave={() => setHoveredNodeId(null)}
+                      className="cursor-crosshair transition-all"
+                    >
+                      <circle cx={coords[i].cx} cy={coords[i].cy} r="4" fill={node.soilMoisture < 45 ? "#fbbf24" : "#10b981"} />
+                      {hoveredNodeId === node.id && (
+                        <foreignObject x={coords[i].cx - 60} y={coords[i].cy - 65} width="120" height="60" className="pointer-events-none">
+                          <div className="bg-zinc-950/90 border border-emerald-500/50 rounded-lg p-2 text-[8.5px] font-mono shadow-xl backdrop-blur-md">
+                            <div className="text-emerald-400 font-bold border-b border-zinc-800 pb-0.5 mb-1 truncate">{node.name}</div>
+                            <div className="flex justify-between text-zinc-300"><span>Moisture:</span> <span className="font-bold">{node.soilMoisture}%</span></div>
+                            <div className="flex justify-between text-zinc-300"><span>Temp:</span> <span className="font-bold">{node.temperature}°C</span></div>
+                          </div>
+                        </foreignObject>
+                      )}
+                    </g>
+                  );
+                })}
 
                 <text x="520" y="268" fill="#ffffff" fontSize="9" textAnchor="middle" fontWeight="bold" fontFamily="monospace">ORCHARD UNIT 7</text>
               </g>

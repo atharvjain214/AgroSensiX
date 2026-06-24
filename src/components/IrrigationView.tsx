@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { WaterPumpTelemetry, SectorData } from "../types";
+import { offlineStorage, IrrigationLog } from "../utils/offlineStorage";
 import { 
   Droplet, 
   Settings, 
@@ -42,10 +43,22 @@ export const IrrigationView: React.FC<IrrigationViewProps> = ({
     "valve-7G-B": false,
   });
 
+  const [irrigationHistory, setIrrigationHistory] = useState<IrrigationLog[]>([]);
+
   // Keep preset mode synchronized with prop state
   useEffect(() => {
     setActivePresetMode(pump.currentMode);
   }, [pump.currentMode]);
+
+  useEffect(() => {
+    // Load irrigation history on mount and keep polling
+    const fetchHistory = () => {
+      setIrrigationHistory(offlineStorage.getIrrigationHistory());
+    };
+    fetchHistory();
+    const interval = setInterval(fetchHistory, 3000);
+    return () => clearInterval(interval);
+  }, []);
 
   const toggleValve = (valveId: keyof typeof valves) => {
     setValves((prev) => ({
@@ -316,6 +329,46 @@ export const IrrigationView: React.FC<IrrigationViewProps> = ({
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Irrigation Event History Log */}
+      <div className="bg-zinc-950/45 backdrop-blur-md border border-zinc-900 rounded-2xl p-5 shadow-xl text-left">
+        <div className="flex justify-between items-center border-b border-zinc-900 pb-2.5 mb-4">
+          <h3 className="text-xs font-mono font-bold text-zinc-200 uppercase tracking-widest flex items-center gap-2">
+            <Clock className="w-4 h-4 text-emerald-500" />
+            Recent Irrigation History
+          </h3>
+          <span className="text-[10px] font-mono text-zinc-555 font-bold">LATEST RECORDS</span>
+        </div>
+
+        {irrigationHistory.length === 0 ? (
+          <div className="text-center py-6 text-zinc-600 font-mono text-xs border border-zinc-900/30 rounded-xl bg-zinc-950/20">
+            No recent irrigation events recorded.
+          </div>
+        ) : (
+          <div className="space-y-2 max-h-[240px] overflow-y-auto pr-1">
+            {irrigationHistory.slice().reverse().map((log) => (
+              <div key={log.id} className="bg-zinc-950 border border-zinc-900 p-3 rounded-xl flex items-center justify-between text-xs font-mono text-left">
+                <div className="space-y-1">
+                  <span className="text-zinc-200 font-bold block">{log.sectorName}</span>
+                  <div className="flex flex-wrap items-center gap-2.5 text-[9.5px] text-zinc-500 font-bold">
+                    <span className="text-zinc-550">{new Date(log.timestamp).toLocaleString()}</span>
+                    <span>|</span>
+                    <span>Duration: {log.durationSec}s</span>
+                    <span>|</span>
+                    <span className="text-emerald-500/80">{log.mode}</span>
+                  </div>
+                </div>
+                <div className="text-right shrink-0">
+                  <span className="text-emerald-455 font-bold block">+{log.litresDispensed} L</span>
+                  <span className={`text-[8.5px] font-bold px-1.5 py-0.5 rounded ${log.syncStatus === "synced" ? "bg-emerald-500/10 text-emerald-400" : "bg-amber-500/10 text-amber-500 animate-pulse"}`}>
+                    {log.syncStatus === "synced" ? "SYNCED" : "LOCAL PENDING"}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
     </div>

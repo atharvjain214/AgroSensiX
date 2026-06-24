@@ -58,7 +58,8 @@ import {
   Globe,
   Cpu,
   BookOpen,
-  Info
+  Info,
+  AlertOctagon
 } from "lucide-react";
 
 export default function App() {
@@ -970,6 +971,17 @@ export default function App() {
 
             {/* Header Actions Panel (No light togglers, strictly system session status & networks) */}
             <div className="flex items-center gap-3">
+              {loggedInUser && (
+                <button
+                  onClick={() => handleUpdatePumpMode("off")}
+                  className="px-3 py-2.5 bg-rose-500/10 hover:bg-rose-500 hover:text-white border border-rose-500/40 text-rose-450 font-mono text-[9.5px] uppercase tracking-wider transition-all duration-300 flex items-center gap-1.5 cursor-pointer shadow-sm rounded-xl font-bold active:scale-95 group"
+                  title="EMERGENCY: Immediately halt all active water pumping and override pulser timers."
+                >
+                  <AlertOctagon className="w-3.5 h-3.5 shrink-0 group-hover:animate-pulse" />
+                  <span className="hidden sm:inline">STOP ALL PUMPING</span>
+                </button>
+              )}
+
               {/* Force Offline Simulation status badge */}
               <button
                 onClick={() => setForceOffline(!forceOffline)}
