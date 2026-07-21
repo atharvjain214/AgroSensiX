@@ -698,7 +698,7 @@ export default function App() {
       case NavigationPage.ANALYTICS:
         return <AnalyticsView />;
       case NavigationPage.AI_ASSISTANT:
-        return <AiAssistantView sectors={sectors} battery={battery} pump={pump} />;
+        return <AiAssistantView sectors={sectors} battery={battery} pump={pump} isOnline={!forceOffline} />;
       case NavigationPage.GMAIL:
         return <GmailView sectors={sectors} battery={battery} pump={pump} />;
       case NavigationPage.IRRIGATION_CONTROL:

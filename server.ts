@@ -69,7 +69,7 @@ Instead, use simple words:
 - "Pest & disease risk" instead of "Spore risk coefficient"
 - "Sensors" instead of "IoT nodes" or "Transmitters"
 
-Give professional, actionable, and warm recommendations to real farmers. Keep responses highly scannable and practical.
+CRITICAL INSTRUCTION: You MUST be able to answer ANY general knowledge questions the user asks, including math questions (e.g., if asked "what is 5*4", you must answer "20"). Do not restrict yourself to only farming topics. If the user asks a general question, answer it directly and accurately.
 
 CRITICAL SINGLE-LANGUAGE RULES:
 1. RESPONSE LANGUAGE SELECTION: Determine response language ONLY from the user's most recent message. Ignore previous conversation history language or any pre-calculated templates.
@@ -335,21 +335,31 @@ app.post("/api/gemini/chat", async (req, res) => {
   res.write("id: " + Date.now() + "\n\n");
 
   // Format context history for general content parameter
-  const contentsList: any[] = [];
+  const rawContents: any[] = [];
   if (history && Array.isArray(history)) {
     history.slice(-10).forEach((msg: any) => {
-      contentsList.push({
+      rawContents.push({
         role: msg.role === "assistant" ? "model" : "user",
-        parts: [{ text: msg.content }]
+        parts: [{ text: msg.content || " " }]
       });
     });
   }
   
   // Append current message
-  contentsList.push({
+  rawContents.push({
     role: "user",
-    parts: [{ text: message }]
+    parts: [{ text: message || " " }]
   });
+
+  // Collapse consecutive roles
+  const contentsList: any[] = [];
+  for (const item of rawContents) {
+    if (contentsList.length > 0 && contentsList[contentsList.length - 1].role === item.role) {
+      contentsList[contentsList.length - 1].parts[0].text += "\n" + item.parts[0].text;
+    } else {
+      contentsList.push(item);
+    }
+  }
 
   // If we have an active Gemini API client, stream content from it!
   if (aiClient) {
@@ -362,9 +372,9 @@ app.post("/api/gemini/chat", async (req, res) => {
       let lastError: any = null;
 
       while (attempts < maxAttempts) {
-        const selectedModel = attempts === maxAttempts ? "gemini-2.5-flash" : "gemini-3.5-flash";
+        attempts++;
+        const selectedModel = "gemini-2.5-flash";
         try {
-          attempts++;
           console.log(`Sending streaming prompt to Gemini using ${selectedModel} (Attempt ${attempts}/${maxAttempts})...`);
           responseStream = await aiClient.models.generateContentStream({
             model: selectedModel,
@@ -397,7 +407,7 @@ app.post("/api/gemini/chat", async (req, res) => {
       res.end();
     } catch (error: any) {
       console.warn("Gemini streaming failed, falling back to simulated stream response:", error);
-      const fallbackData = getSimulatedBotanicalResponse(message, true);
+      const fallbackData = getSimulatedBotanicalResponse(message, false);
       const text = fallbackData.response;
       const words = text.split(" ");
       for (const word of words) {
