@@ -16,7 +16,16 @@ import {
   Award, 
   Smartphone, 
   CheckCircle,
-  Volume2
+  Volume2,
+  Play,
+  Cpu,
+  BarChart3,
+  Check,
+  ShieldCheck,
+  Compass,
+  Radio,
+  Layers,
+  Sparkle
 } from "lucide-react";
 
 interface HomeViewProps {
@@ -34,14 +43,14 @@ export const HomeView: React.FC<HomeViewProps> = ({
   userName,
   isLoggedIn
 }) => {
-  // Counters for the Live Impact section with incremental animation state
+  // Counters for the Live Impact section
   const [waterSavedCount, setWaterSavedCount] = useState(0);
   const [solarGeneratedCount, setSolarGeneratedCount] = useState(0);
   const [cropsProtectedCount, setCropsProtectedCount] = useState(0);
   const [energySavedCount, setEnergySavedCount] = useState(0);
   const [carbonReductionCount, setCarbonReductionCount] = useState(0);
 
-  // Active language for the centerpiece AI farming assistant
+  // Active language for AI assistant
   const [activeLang, setActiveLang] = useState<"en" | "hi" | "pa" | "mr" | "bn" | "ta" | "te" | "gu">("en");
   const [aiResponseText, setAiResponseText] = useState("");
   const [isAiTyping, setIsAiTyping] = useState(false);
@@ -52,8 +61,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
 
   // Counters initialization
   useEffect(() => {
-    const duration = 2000; // ms
-    const steps = 60;
+    const duration = 1800; // ms
+    const steps = 50;
     const intervalTime = duration / steps;
     
     let currentStep = 0;
@@ -62,8 +71,8 @@ export const HomeView: React.FC<HomeViewProps> = ({
       water: 148350,
       solar: 5490,
       crops: 94250,
-      energy: 3120,
-      carbon: 12450
+      energy: 312,
+      carbon: 1245
     };
 
     const timer = setInterval(() => {
@@ -72,68 +81,64 @@ export const HomeView: React.FC<HomeViewProps> = ({
         setWaterSavedCount(targets.water);
         setSolarGeneratedCount(targets.solar);
         setCropsProtectedCount(targets.crops);
-        setEnergySavedCount(targets.energy * 0.1);
-        setCarbonReductionCount(targets.carbon * 0.1);
+        setEnergySavedCount(targets.energy);
+        setCarbonReductionCount(targets.carbon);
         clearInterval(timer);
       } else {
         const ratio = currentStep / steps;
-        // Ease-out quad
         const easeRatio = ratio * (2 - ratio);
         setWaterSavedCount(Math.round(targets.water * easeRatio));
         setSolarGeneratedCount(Math.round(targets.solar * easeRatio));
         setCropsProtectedCount(Math.round(targets.crops * easeRatio));
-        setEnergySavedCount(targets.energy * 0.1 * easeRatio);
-        setCarbonReductionCount(targets.carbon * 0.1 * easeRatio);
+        setEnergySavedCount(Math.round(targets.energy * easeRatio));
+        setCarbonReductionCount(Math.round(targets.carbon * easeRatio));
       }
     }, intervalTime);
 
     return () => clearInterval(timer);
   }, []);
 
-  // Multi-lingual AI response data
   const aiResponses = {
     en: {
-      question: "What is my soil status in Greenhouse 14?",
-      answer: "Your soil is becoming dry. Irrigation may be required soon. Direct solar backup is nominal at 4.8 kW."
+      question: "What is my soil moisture status in Greenhouse 14?",
+      answer: "Soil moisture is currently at 52.4% (Nominal). Deep root sensor telemetry indicates optimal hydration. Next drip irrigation pulse scheduled in 4 hours based on solar evapotranspiration forecasts."
     },
     hi: {
-      question: "ग्रीनहाउस 14 में मिट्टी की स्थिति क्या है?",
-      answer: "आपकी मिट्टी सूखी हो रही है। जल्द ही सिंचाई की आवश्यकता हो सकती है। सौर बैकअप 4.8 kW पर सामान्य है।"
+      question: "ग्रीनहाउस 14 में मिट्टी की नमी की क्या स्थिति है?",
+      answer: "मिट्टी की नमी वर्तमान में 52.4% (सामान्य) पर है। गहरे जड़ सेंसर इष्टतम जलयोजन का संकेत देते हैं। अगला सिंचाई पल्स 4 घंटे में सौर वाष्पोत्सर्जन पूर्वानुमान पर आधारित है।"
     },
     pa: {
-      question: "ਗ੍ਰੀਨਹਾਉਸ 14 ਵਿੱਚ ਮਿੱਟੀ ਦੀ ਸਥਿਤੀ ਕੀ ਹੈ?",
-      answer: "ਤੁਹਾਡੀ ਮਿੱਟੀ ਖੁਸ਼ਕ ਹੋ ਰਹੀ ਹੈ। ਜਲਦੀ ਹੀ ਸਿੰਚਾਈ ਦੀ ਲੋੜ ਹੋ ਸਕਦੀ ਹੈ। ਸੌਰ ਬੈਕਅੱਪ 4.8 kW 'ਤੇ ਸਧਾਰਨ ਹੈ।"
+      question: "ਗ੍ਰੀਨਹਾਉਸ 14 ਵਿੱਚ ਮਿੱਟੀ ਦੀ ਨਮੀ ਦੀ ਸਥਿਤੀ ਕੀ ਹੈ?",
+      answer: "ਮਿੱਟੀ ਦੀ ਨਮੀ ਇਸ ਵੇਲੇ 52.4% ਹੈ। ਡੂੰਘੀ ਜੜ੍ਹ ਦੇ ਸੈਂਸਰ ਵਧੀਆ ਪਾਣੀ ਦਾ ਸੰਕੇਤ ਦਿੰਦੇ ਹਨ। ਅਗਲੀ ਸਿੰਚਾਈ 4 ਘੰਟਿਆਂ ਵਿੱਚ ਪ੍ਰਸਤਾਵਿਤ ਹੈ।"
     },
     mr: {
-      question: "ग्रीनहाऊस 14 मधील जमिनीची स्थिती काय आहे?",
-      answer: "तुमची जमीन कोरडी होत आहे. लवकरच सिंचनाची आवश्यकता भासू शकते. सौर बॅकअप 4.8 kW वर सामान्य आहे।"
+      question: "ग्रीनहाऊस 14 मध्ये जमिनीतील ओलावा कसा आहे?",
+      answer: "जमिनीतील ओलावा ५२.४% वर स्थिर आहे. रूट सेन्सर्स योग्य ओलावा दर्शवतात. पुढील सिंचन सायकल ४ तासांनंतर सुरु होईल."
     },
     bn: {
-      question: "গ্রিনহাউস 14-এ মাটির অবস্থা কী রকম?",
-      answer: "আপনার মাটি শুষ্ক হয়ে যাচ্ছে। শীঘ্রই সেচের প্রয়োজন হতে পারে। সোলার ব্যাকআপ 4.8 kW-এ স্বাভাবিক।"
+      question: "গ্রিনহাউস 14-এ মাটির আর্দ্রতা কেমন?",
+      answer: "মাটির আর্দ্রতা বর্তমানে ৫২.৪% এ স্বাভাবিক। রুট সেন্সরগুলি সর্বোত্তম আর্দ্রতার সংকেত দিচ্ছে। পরবর্তী সেচ ৪ ঘণ্টা পরে নির্ধারিত।"
     },
     ta: {
-      question: "கிரீன்ஹவுஸ் 14 இல் மண்ணின் நிலை என்ன?",
-      answer: "உங்கள் மண் வறண்டு வருகிறது. விரைவில் பாசனம் தேவைப்படலாம். சோலார் பேக்கப் 4.8 kW இல் சாதாரணமாக உள்ளது."
+      question: "கிரீன்ஹவுஸ் 14 இல் மண்ணின் ஈரப்பதம் என்ன?",
+      answer: "மண்ணின் ஈரப்பதம் 52.4% இல் சாதாரணமாக உள்ளது. அடுத்த பாசன சுழற்சி 4 மணிநேரத்தில் திட்டமிடப்பட்டுள்ளது."
     },
     te: {
-      question: "గ్రీన్హౌస్ 14 లో నా నేల పరిస్థితి ఎలా ఉంది?",
-      answer: "మీ నేల పొడిగా మారుతోంది. త్వరలోనే సాగు నీరు అవసరం కావచ్చు. సోలార్ బ్యాకప్ 4.8 kW వద్ద సాధారణంగా ఉంది."
+      question: "గ్రీన్హౌస్ 14 లో నా నేల తేమ ఎలా ఉంది?",
+      answer: "నేల తేమ ప్రస్తుతం 52.4% వద్ద స్థిరంగా ఉంది. తదుపరి సాగు నీటి పల్స్ 4 గంటల తర్వాత నడుస్తుంది."
     },
     gu: {
-      question: "ગ્રીનહાઉસ 14 માં જમીનની સ્થિતિ કેવી છે?",
-      answer: "તમારી જમીન સુકાઈ રહી છે. ટૂંક સમયમાં સિંચાઈની જરૂર પડી શકે છે. સોલાર બેકઅપ 4.8 kW પર સામાન્ય છે."
+      question: "ગ્રીનહાઉસ 14 માં જમીનનો ભેજ કેવો છે?",
+      answer: "જમીનનો ભેજ હાલમાં 52.4% પર સામાન્ય છે. આગામી સિંચાઈ ચક્ર 4 કલાક પછી સુ নির্ধারিত છે."
     }
   };
 
-  // Trigger typewriter effect when language changes
   useEffect(() => {
     setIsAiTyping(true);
     setAiResponseText("");
     const text = aiResponses[activeLang].answer;
     let index = 0;
     
-    // Quick typing simulation
     const typeTimer = setInterval(() => {
       setAiResponseText((prev) => prev + text.charAt(index));
       index++;
@@ -141,257 +146,228 @@ export const HomeView: React.FC<HomeViewProps> = ({
         clearInterval(typeTimer);
         setIsAiTyping(false);
       }
-    }, 15);
+    }, 12);
 
     return () => clearInterval(typeTimer);
   }, [activeLang]);
 
   const languages = [
     { code: "en", name: "English" },
-    { code: "hi", name: "हिन्दी (Hindi)" },
-    { code: "pa", name: "ਪੰਜਾਬੀ (Punjabi)" },
-    { code: "mr", name: "मराठी (Marathi)" },
-    { code: "bn", name: "বাংলা (Bengali)" },
-    { code: "ta", name: "தமிழ் (Tamil)" },
-    { code: "te", name: "తెలుగు (Telugu)" },
-    { code: "gu", name: "ગુજરાતી (Gujarati)" }
+    { code: "hi", name: "हिन्दी" },
+    { code: "pa", name: "ਪੰਜਾਬੀ" },
+    { code: "mr", name: "मराठी" },
+    { code: "bn", name: "বাংলা" },
+    { code: "ta", name: "தமிழ்" },
+    { code: "te", name: "తెలుగు" },
+    { code: "gu", name: "ગુજરાતી" }
   ];
 
   return (
     <div className="space-y-16 animate-fade-in text-left">
       
-      {/* Absolute floating aurora background lights */}
-      <div className="absolute top-[80px] left-[5%] w-[350px] h-[350px] bg-cyan-500/10 rounded-full blur-[110px] pointer-events-none animate-aurora-cyan" />
-      <div className="absolute top-[280px] right-[5%] w-[400px] h-[400px] bg-emerald-500/10 rounded-full blur-[130px] pointer-events-none animate-aurora-gold" />
-      <div className="absolute top-[1200px] left-[15%] w-[500px] h-[500px] bg-blue-500/5 rounded-full blur-[150px] pointer-events-none" />
+      {/* Background ambient lighting */}
+      <div className="absolute top-[80px] left-[5%] w-[450px] h-[450px] bg-emerald-500/10 rounded-full blur-[140px] pointer-events-none" />
+      <div className="absolute top-[350px] right-[5%] w-[450px] h-[450px] bg-cyan-500/10 rounded-full blur-[140px] pointer-events-none" />
 
-      {/* Hero Section */}
-      <div className="relative rounded-[32px] overflow-hidden border border-zinc-900/80 bg-neutral-950 shadow-2xl">
-        {/* Dynamic mesh linear gradients */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#0c233c] via-[#050e18] to-black opacity-90" />
-        <div className="absolute inset-x-0 bottom-0 h-2/3 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
-        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(34,211,238,0.015)_1px,transparent_1px),linear-gradient(to_bottom,rgba(34,211,238,0.015)_1px,transparent_1px)] bg-[size:40px_40px] opacity-60 pointer-events-none" />
+      {/* HERO SECTION */}
+      <div className="relative rounded-[32px] overflow-hidden border border-emerald-500/20 bg-neutral-950 shadow-2xl">
+        <div className="absolute inset-0 bg-gradient-to-br from-[#061826] via-[#020b14] to-black opacity-95" />
+        <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black via-transparent to-transparent opacity-90" />
+        <div className="absolute inset-0 bg-[linear-gradient(to_right,rgba(16,185,129,0.03)_1px,transparent_1px),linear-gradient(to_bottom,rgba(16,185,129,0.03)_1px,transparent_1px)] bg-[size:36px_36px] pointer-events-none" />
 
-        <div className="relative z-10 max-w-5xl mx-auto px-6 py-20 md:py-28 text-center space-y-8">
-          {/* Animated Glass Tag */}
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-cyan-500/30 bg-cyan-950/40 text-cyan-300 font-mono text-[10px] uppercase tracking-widest shadow-[0_0_15px_rgba(34,211,238,0.15)] animate-pulse">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-450 shrink-0" />
-            AgroSensiX OS v3.0 • The Future of Farming
+        <div className="relative z-10 max-w-6xl mx-auto px-6 py-20 md:py-28 text-center space-y-8">
+          
+          {/* Status Badge */}
+          <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full border border-emerald-500/30 bg-emerald-950/40 text-emerald-300 font-mono text-[11px] uppercase tracking-widest shadow-[0_0_20px_rgba(16,185,129,0.2)]">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+            <span>AgroSensiX OS v3.0 • Smart Farming Ecosystem</span>
           </div>
 
-          {/* Massively Bold display Hero Title */}
-          <div className="space-y-4">
-            <h1 className="text-4xl md:text-7xl font-extrabold tracking-tight text-white font-sans uppercase">
-              FUTURE OF FARMING <br className="hidden md:block"/>
-              <span className="bg-gradient-to-r from-emerald-400 via-cyan-400 to-amber-300 bg-clip-text text-transparent">
-                STARTS HERE.
+          {/* Hero Main Heading */}
+          <div className="space-y-4 max-w-4xl mx-auto">
+            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight text-white font-sans uppercase leading-[1.08]">
+              PRECISION AGRICULTURE <br className="hidden sm:block" />
+              <span className="bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 bg-clip-text text-transparent">
+                POWERED BY AI.
               </span>
             </h1>
-            <p className="max-w-2xl mx-auto text-sm md:text-lg text-zinc-350 font-normal leading-relaxed">
-              AI-Powered Agricultural Intelligence for Smarter, Safer, and More Sustainable Farming. Elevate your crop yield with space-grade analytics.
+            <p className="max-w-2xl mx-auto text-base sm:text-lg text-zinc-300 font-sans font-normal leading-relaxed">
+              Space-grade IoT telemetry, intelligent water conservation, and conversational Gemini AI diagnostics for maximum crop yield and zero resource waste.
             </p>
           </div>
 
-          {/* Premium Launch Buttons */}
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-3">
+          {/* Hero CTAs */}
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
             <button
               onClick={() => onNavigate(NavigationPage.DASHBOARD)}
-              className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-[#020508] font-sans font-bold text-xs uppercase tracking-widest rounded-2xl shadow-xl hover:shadow-cyan-400/25 transition-all duration-300 hover:-translate-y-1 cursor-pointer flex items-center justify-center gap-2.5 active:scale-95 text-center min-w-[200px]"
+              className="w-full sm:w-auto px-8 py-4 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500 hover:from-emerald-400 hover:to-cyan-400 text-neutral-950 font-sans font-bold text-xs uppercase tracking-widest rounded-2xl shadow-xl hover:shadow-emerald-500/25 transition-all duration-300 hover:-translate-y-0.5 cursor-pointer flex items-center justify-center gap-2.5 active:scale-95 text-center min-w-[210px]"
             >
-              Launch Dashboard
+              <span>Launch Dashboard</span>
               <ArrowRight className="w-4 h-4 shrink-0" />
             </button>
-            <button
-              onClick={() => setShowDemoModal(true)}
-              className="w-full sm:w-auto px-8 py-4 bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-800 text-white font-sans font-bold text-xs uppercase tracking-widest rounded-2xl transition-all duration-300 hover:border-zinc-700 hover:-translate-y-1 cursor-pointer flex items-center justify-center gap-2.5 active:scale-95 text-center min-w-[200px]"
-            >
-              Watch Demo
-              <span className="text-amber-400 shrink-0 animate-pulse">▶</span>
-            </button>
+
+            {!isLoggedIn ? (
+              <button
+                onClick={() => onNavigate(NavigationPage.LOGIN)}
+                className="w-full sm:w-auto px-8 py-4 bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-700/80 text-white font-sans font-bold text-xs uppercase tracking-widest rounded-2xl transition-all duration-300 hover:border-emerald-500/40 hover:-translate-y-0.5 cursor-pointer flex items-center justify-center gap-2.5 active:scale-95 text-center min-w-[210px]"
+              >
+                <span>Sign In / Register</span>
+                <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0" />
+              </button>
+            ) : (
+              <button
+                onClick={() => setShowDemoModal(true)}
+                className="w-full sm:w-auto px-8 py-4 bg-zinc-900/90 hover:bg-zinc-800 border border-zinc-700/80 text-white font-sans font-bold text-xs uppercase tracking-widest rounded-2xl transition-all duration-300 hover:border-cyan-500/40 hover:-translate-y-0.5 cursor-pointer flex items-center justify-center gap-2.5 active:scale-95 text-center min-w-[210px]"
+              >
+                <span>Watch System Demo</span>
+                <Play className="w-3.5 h-3.5 text-amber-400 shrink-0 fill-current" />
+              </button>
+            )}
           </div>
 
-          {/* Quick status message */}
-          {isLoggedIn ? (
-            <p className="text-[10px] font-mono text-emerald-400 uppercase tracking-widest">
-              ● Connected as coordinator: <span className="font-semibold">{userName}</span>
-            </p>
-          ) : (
-            <p className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest">
-              ● Server Online • Guest Access Enabled
-            </p>
-          )}
+          {/* User connection info */}
+          <div className="pt-2">
+            {isLoggedIn ? (
+              <p className="text-[11px] font-mono text-emerald-400 uppercase tracking-widest font-semibold">
+                ● ACTIVE SESSION: <span className="text-white">{userName}</span>
+              </p>
+            ) : (
+              <p className="text-[11px] font-mono text-zinc-400 uppercase tracking-widest">
+                ● TELEMETRY BRIDGE LIVE • OFFLINE CACHE AUTONOMY READY
+              </p>
+            )}
+          </div>
 
         </div>
       </div>
 
-      {/* LIVE IMPACT STATISTICS SECTION */}
+      {/* LIVE TELEMETRY IMPACT COUNTERS */}
       <div className="space-y-6">
         <div className="text-center md:text-left">
-          <span className="text-[9.5px] font-mono text-emerald-400 uppercase tracking-widest font-bold">REAL-TIME GLOBAL TELEMETRY</span>
-          <h2 className="text-xl md:text-2xl font-bold font-sans text-white uppercase tracking-tight mt-1">Live Technical & Environmental Impact</h2>
+          <span className="text-[10px] font-mono text-emerald-400 uppercase tracking-widest font-bold block">REAL-TIME FIELD METRICS</span>
+          <h2 className="text-2xl font-bold font-sans text-white uppercase tracking-tight mt-1">Live Technical & Environmental Impact</h2>
         </div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
-          {/* Water Saved Container */}
-          <div className="bg-zinc-950/40 border border-zinc-900/90 rounded-2xl p-5 hover:border-emerald-500/20 transition-all duration-300 relative group overflow-hidden shadow-lg">
-            <span className="text-[9px] font-mono text-zinc-400 block uppercase font-bold tracking-widest mb-1.5">💧 Water Saved</span>
-            <div className="text-xl md:text-2xl font-bold font-mono text-emerald-400 tracking-tight flex items-baseline gap-1">
-              {waterSavedCount.toLocaleString()}<span className="text-[10px] font-sans font-semibold text-zinc-500">L</span>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div className="bg-zinc-950/60 border border-zinc-800/80 rounded-2xl p-5 hover:border-emerald-500/40 transition-all duration-300 shadow-xl">
+            <span className="text-[10px] font-mono text-zinc-400 block uppercase font-bold tracking-widest mb-1">💧 Water Saved</span>
+            <div className="text-2xl font-bold font-mono text-emerald-400 tracking-tight">
+              {waterSavedCount.toLocaleString()}<span className="text-xs text-zinc-500 ml-1">L</span>
             </div>
-            <p className="text-[9px] text-zinc-500 mt-2 font-mono uppercase tracking-wide">Automatic Valve Pulse</p>
+            <p className="text-[9.5px] text-zinc-400 mt-2 font-mono uppercase">Precision Drip Pulse</p>
           </div>
 
-          {/* Solar Energy Generated */}
-          <div className="bg-zinc-950/40 border border-zinc-900/90 rounded-2xl p-5 hover:border-amber-500/20 transition-all duration-300 relative group overflow-hidden shadow-lg">
-            <span className="text-[9px] font-mono text-zinc-400 block uppercase font-bold tracking-widest mb-1.5">☀ Solar Harvest</span>
-            <div className="text-xl md:text-2xl font-bold font-mono text-amber-400 tracking-tight flex items-baseline gap-1">
-              {solarGeneratedCount.toLocaleString()}<span className="text-[10px] font-sans font-semibold text-zinc-500">kWh</span>
+          <div className="bg-zinc-950/60 border border-zinc-800/80 rounded-2xl p-5 hover:border-amber-500/40 transition-all duration-300 shadow-xl">
+            <span className="text-[10px] font-mono text-zinc-400 block uppercase font-bold tracking-widest mb-1">☀ Solar Harvest</span>
+            <div className="text-2xl font-bold font-mono text-amber-400 tracking-tight">
+              {solarGeneratedCount.toLocaleString()}<span className="text-xs text-zinc-500 ml-1">kWh</span>
             </div>
-            <p className="text-[9px] text-zinc-500 mt-2 font-mono uppercase tracking-wide">Off-grid Clean Storage</p>
+            <p className="text-[9.5px] text-zinc-400 mt-2 font-mono uppercase">Off-grid Clean Storage</p>
           </div>
 
-          {/* Crops Protected */}
-          <div className="bg-zinc-950/40 border border-zinc-900/90 rounded-2xl p-5 hover:border-cyan-500/20 transition-all duration-300 relative group overflow-hidden shadow-lg">
-            <span className="text-[9px] font-mono text-zinc-400 block uppercase font-bold tracking-widest mb-1.5">🌱 Crops Protected</span>
-            <div className="text-xl md:text-2xl font-bold font-mono text-[#22D3EE] tracking-tight flex items-baseline gap-1">
-              {cropsProtectedCount.toLocaleString()}<span className="text-[10px] font-sans font-semibold text-zinc-500">units</span>
+          <div className="bg-zinc-950/60 border border-zinc-800/80 rounded-2xl p-5 hover:border-cyan-500/40 transition-all duration-300 shadow-xl">
+            <span className="text-[10px] font-mono text-zinc-400 block uppercase font-bold tracking-widest mb-1">🌱 Crops Protected</span>
+            <div className="text-2xl font-bold font-mono text-cyan-400 tracking-tight">
+              {cropsProtectedCount.toLocaleString()}<span className="text-xs text-zinc-500 ml-1">units</span>
             </div>
-            <p className="text-[9px] text-zinc-500 mt-2 font-mono uppercase tracking-wide">Fungal spot shielding</p>
+            <p className="text-[9.5px] text-zinc-400 mt-2 font-mono uppercase">Blight Rain Shielding</p>
           </div>
 
-          {/* Energy Saved */}
-          <div className="bg-zinc-950/40 border border-zinc-900/90 rounded-2xl p-5 hover:border-yellow-500/20 transition-all duration-300 relative group overflow-hidden shadow-lg">
-            <span className="text-[9px] font-mono text-zinc-400 block uppercase font-bold tracking-widest mb-1.5">⚡ Energy Conserved</span>
-            <div className="text-xl md:text-2xl font-bold font-mono text-[#FBBF24] tracking-tight flex items-baseline gap-1">
-              {energySavedCount.toFixed(1)}<span className="text-[10px] font-sans font-semibold text-zinc-500">MW</span>
+          <div className="bg-zinc-950/60 border border-zinc-800/80 rounded-2xl p-5 hover:border-teal-500/40 transition-all duration-300 shadow-xl">
+            <span className="text-[10px] font-mono text-zinc-400 block uppercase font-bold tracking-widest mb-1">⚡ Energy Conserved</span>
+            <div className="text-2xl font-bold font-mono text-teal-400 tracking-tight">
+              {energySavedCount}<span className="text-xs text-zinc-500 ml-1">MW</span>
             </div>
-            <p className="text-[9px] text-zinc-500 mt-2 font-mono uppercase tracking-wide">Eco Hydrology pump</p>
+            <p className="text-[9.5px] text-zinc-400 mt-2 font-mono uppercase">Optimized Hydrology</p>
           </div>
 
-          {/* Carbon Reduction */}
-          <div className="bg-zinc-950/40 border border-zinc-900/90 rounded-2xl p-5 hover:border-emerald-500/20 transition-all duration-300 relative group overflow-hidden shadow-lg col-span-2 lg:col-span-1">
-            <span className="text-[9px] font-mono text-zinc-400 block uppercase font-bold tracking-widest mb-1.5">🌍 Carbon Offset</span>
-            <div className="text-xl md:text-2xl font-bold font-mono text-emerald-455 tracking-tight flex items-baseline gap-1">
-              {carbonReductionCount.toFixed(1)}<span className="text-[10px] font-sans font-semibold text-zinc-500">kg CO₂</span>
+          <div className="bg-zinc-950/60 border border-zinc-800/80 rounded-2xl p-5 hover:border-emerald-500/40 transition-all duration-300 shadow-xl col-span-2 md:col-span-1">
+            <span className="text-[10px] font-mono text-zinc-400 block uppercase font-bold tracking-widest mb-1">🌍 Carbon Offset</span>
+            <div className="text-2xl font-bold font-mono text-emerald-300 tracking-tight">
+              {carbonReductionCount}<span className="text-xs text-zinc-500 ml-1">kg CO₂</span>
             </div>
-            <p className="text-[9px] text-zinc-500 mt-2 font-mono uppercase tracking-wide">Eco emission decline</p>
+            <p className="text-[9.5px] text-zinc-400 mt-2 font-mono uppercase">Zero Emission Footprint</p>
           </div>
         </div>
       </div>
 
-      {/* WHY AGROSENSIX SECTION */}
+      {/* CORE AGROSENSIX CAPABILITIES */}
       <div className="space-y-6">
         <div className="text-center md:text-left">
-          <span className="text-[9.5px] font-mono text-[#22D3EE] uppercase tracking-widest font-bold">WHY CHOOSE THE OS CONTROLLER?</span>
-          <h2 className="text-xl md:text-2xl font-bold font-sans text-white uppercase tracking-tight mt-1">High-Precision Agricultural Engineering</h2>
+          <span className="text-[10px] font-mono text-cyan-400 uppercase tracking-widest font-bold block">PLATFORM ARCHITECTURE</span>
+          <h2 className="text-2xl font-bold font-sans text-white uppercase tracking-tight mt-1">High-Precision Agricultural Engineering</h2>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           
-          {/* Smart Irrigation Card */}
-          <div className="bg-zinc-950/60 border border-zinc-900 rounded-2xl p-6 hover:border-emerald-500/30 hover:shadow-emerald-950/15 duration-300 relative group flex flex-col justify-between h-56 shadow-md transition-all">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
-            <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 self-start">
-              <Droplets className="w-5 h-5" />
+          <div className="bg-neutral-950 border border-zinc-800/90 rounded-2xl p-6 hover:border-emerald-500/40 transition-all duration-300 space-y-4 shadow-xl">
+            <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+              <Droplets className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="text-sm font-sans font-bold text-white uppercase tracking-wider">Smart Irrigation</h4>
-              <p className="text-xs text-zinc-400 mt-1 font-sans leading-normal font-bold">
-                Adjusts water intervals Dynamically based on real-time sub-root soil humidity map calculations.
+              <h3 className="text-base font-bold text-white uppercase tracking-wide">Smart Drip Irrigation</h3>
+              <p className="text-xs text-zinc-400 leading-relaxed mt-2 font-medium">
+                Uses root-depth soil sensor arrays to automatically calculate transpiration curves, releasing micro-drip pulses only when soil moisture dips below optimal thresholds.
               </p>
             </div>
           </div>
 
-          {/* Solar Powered Card */}
-          <div className="bg-zinc-950/60 border border-zinc-900 rounded-2xl p-6 hover:border-amber-500/30 hover:shadow-amber-950/15 duration-300 relative group flex flex-col justify-between h-56 shadow-md transition-all">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
-            <div className="p-3 bg-amber-500/10 border border-amber-500/20 rounded-xl text-amber-500 self-start">
-              <Sun className="w-5 h-5 shrink-0" />
+          <div className="bg-neutral-950 border border-zinc-800/90 rounded-2xl p-6 hover:border-amber-500/40 transition-all duration-300 space-y-4 shadow-xl">
+            <div className="w-11 h-11 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-400">
+              <Sun className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="text-sm font-sans font-bold text-white uppercase tracking-wider">Solar Powered</h4>
-              <p className="text-xs text-zinc-400 mt-1 font-sans leading-normal font-bold">
-                100% independent off-grid solar Backplane panel tracking with integrated battery voltage stabilizers.
+              <h3 className="text-base font-bold text-white uppercase tracking-wide">Solar Micro-Grid Power</h3>
+              <p className="text-xs text-zinc-400 leading-relaxed mt-2 font-medium">
+                Self-sustaining off-grid solar Backplane arrays keep field sensors and irrigation solenoids running 24/7 with zero dependence on traditional grid electricity.
               </p>
             </div>
           </div>
 
-          {/* AI Assistant Card */}
-          <div className="bg-zinc-950/60 border border-zinc-900 rounded-2xl p-6 hover:border-cyan-500/30 hover:shadow-cyan-950/15 duration-300 relative group flex flex-col justify-between h-56 shadow-md transition-all">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl pointer-events-none" />
-            <div className="p-3 bg-cyan-500/10 border border-cyan-500/20 rounded-xl text-[#22D3EE] self-start animate-pulse">
-              <Bot className="w-5 h-5 shrink-0" />
+          <div className="bg-neutral-950 border border-zinc-800/90 rounded-2xl p-6 hover:border-cyan-500/40 transition-all duration-300 space-y-4 shadow-xl">
+            <div className="w-11 h-11 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-400">
+              <Bot className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="text-sm font-sans font-bold text-white uppercase tracking-wider">AI Assistant</h4>
-              <p className="text-xs text-zinc-400 mt-1 font-sans leading-normal font-bold">
-                Centerpiece conversational assistant matching your own dialect for precise climate guidelines.
+              <h3 className="text-base font-bold text-white uppercase tracking-wide">Gemini Multilingual AI</h3>
+              <p className="text-xs text-zinc-400 leading-relaxed mt-2 font-medium">
+                Conversational AI supporting English, Hindi, Punjabi, Marathi, Bengali, Tamil, Telugu, and Gujarati. Provides immediate crop diagnosis and weather guidance.
               </p>
             </div>
           </div>
 
-          {/* Multilingual Support Card */}
-          <div className="bg-zinc-950/60 border border-zinc-900 rounded-2xl p-6 hover:border-yellow-500/30 hover:shadow-yellow-950/15 duration-300 relative group flex flex-col justify-between h-56 shadow-md transition-all">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-yellow-500/5 rounded-full blur-2xl pointer-events-none" />
-            <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-xl text-[#FBBF24] self-start">
-              <Globe className="w-5 h-5" />
+          <div className="bg-neutral-950 border border-zinc-800/90 rounded-2xl p-6 hover:border-teal-500/40 transition-all duration-300 space-y-4 shadow-xl">
+            <div className="w-11 h-11 rounded-xl bg-teal-500/10 border border-teal-500/30 flex items-center justify-center text-teal-400">
+              <ShieldAlert className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="text-sm font-sans font-bold text-white uppercase tracking-wider">Multilingual OS</h4>
-              <p className="text-xs text-zinc-400 mt-1 font-sans leading-normal font-bold">
-                Instant translation backplane supporting 8 Indian and English languages dynamically.
+              <h3 className="text-base font-bold text-white uppercase tracking-wide">Pest & Blight Shield</h3>
+              <p className="text-xs text-zinc-400 leading-relaxed mt-2 font-medium">
+                Automated rain detection and ventilator shutters block moisture spikes on delicate leaves, preventing fungal spores and leaf spot diseases before outbreak.
               </p>
             </div>
           </div>
 
-          {/* Offline Operation */}
-          <div className="bg-zinc-950/60 border border-zinc-900 rounded-2xl p-6 hover:border-cyan-500/20 hover:shadow-cyan-950/10 duration-300 relative group flex flex-col justify-between h-56 shadow-md transition-all">
-            <div className="p-3 bg-cyan-500/5 border border-cyan-500/10 rounded-xl text-neutral-400 self-start">
-              <Smartphone className="w-5 h-5" />
+          <div className="bg-neutral-950 border border-zinc-800/90 rounded-2xl p-6 hover:border-emerald-500/40 transition-all duration-300 space-y-4 shadow-xl">
+            <div className="w-11 h-11 rounded-xl bg-emerald-500/10 border border-emerald-500/30 flex items-center justify-center text-emerald-300">
+              <Smartphone className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="text-sm font-sans font-bold text-zinc-200 uppercase tracking-wider">Offline Operation</h4>
-              <p className="text-xs text-zinc-550 mt-1 font-sans leading-normal font-bold">
-                Operates perfectly offline via cached service workers, local indexes, and ESP32 LAN direct bridges.
+              <h3 className="text-base font-bold text-white uppercase tracking-wide">100% Offline Autonomy</h3>
+              <p className="text-xs text-zinc-400 leading-relaxed mt-2 font-medium">
+                Built with full Progressive Web App precaching. Performs local sensor log analysis and controls water valves even when remote field internet is completely cut.
               </p>
             </div>
           </div>
 
-          {/* Crop Protection */}
-          <div className="bg-zinc-950/60 border border-zinc-900 rounded-2xl p-6 hover:border-emerald-500/20 hover:shadow-emerald-950/10 duration-300 relative group flex flex-col justify-between h-56 shadow-md transition-all">
-            <div className="p-3 bg-emerald-500/5 border border-emerald-500/10 rounded-xl text-neutral-400 self-start">
-              <ShieldAlert className="w-5 h-5 shrink-0" />
+          <div className="bg-neutral-950 border border-zinc-800/90 rounded-2xl p-6 hover:border-cyan-500/40 transition-all duration-300 space-y-4 shadow-xl">
+            <div className="w-11 h-11 rounded-xl bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-cyan-300">
+              <Activity className="w-6 h-6" />
             </div>
             <div>
-              <h4 className="text-sm font-sans font-bold text-zinc-200 uppercase tracking-wider">Crop Protection</h4>
-              <p className="text-xs text-zinc-550 mt-1 font-sans leading-normal font-bold">
-                Automated ventilator and ventilator control, blocking rainfall to avert leaf spot and fungal risk.
-              </p>
-            </div>
-          </div>
-
-          {/* Water Conservation */}
-          <div className="bg-zinc-950/60 border border-zinc-900 rounded-2xl p-6 hover:border-teal-500/20 hover:shadow-teal-950/10 duration-300 relative group flex flex-col justify-between h-56 shadow-md transition-all">
-            <div className="p-3 bg-teal-500/5 border border-teal-500/10 rounded-xl text-neutral-400 self-start">
-              <Activity className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="text-sm font-sans font-bold text-zinc-200 uppercase tracking-wider">Water Conservation</h4>
-              <p className="text-xs text-zinc-550 mt-1 font-sans leading-normal font-bold">
-                Reduces total consumption by up to 35% compared to ancient mechanical calendar intervals.
-              </p>
-            </div>
-          </div>
-
-          {/* Sustainability */}
-          <div className="bg-zinc-950/60 border border-zinc-900 rounded-2xl p-6 hover:border-green-500/20 hover:shadow-green-950/10 duration-300 relative group flex flex-col justify-between h-56 shadow-md transition-all">
-            <div className="p-3 bg-green-500/5 border border-green-500/10 rounded-xl text-neutral-400 self-start">
-              <Award className="w-5 h-5" />
-            </div>
-            <div>
-              <h4 className="text-sm font-sans font-bold text-zinc-200 uppercase tracking-wider">Sustainability</h4>
-              <p className="text-xs text-zinc-550 mt-1 font-sans leading-normal font-bold">
-                Combines high-efficiency solar battery storage with ecological recycling principles for zero footprint.
+              <h3 className="text-base font-bold text-white uppercase tracking-wide">Space-Grade Analytics</h3>
+              <p className="text-xs text-zinc-400 leading-relaxed mt-2 font-medium">
+                Combines micro-climate weather forecasts with satellite soil nitrogen metrics to give farmers hyper-targeted fertilizer and harvest recommendations.
               </p>
             </div>
           </div>
@@ -399,211 +375,181 @@ export const HomeView: React.FC<HomeViewProps> = ({
         </div>
       </div>
 
-      {/* CENTERPIECE PORTAL CO-PILOT ASSISTANT */}
-      <div className="bg-neutral-950 rounded-[32px] border border-zinc-900/80 p-6 md:p-10 relative overflow-hidden shadow-2xl">
-        <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-gradient-to-br from-emerald-555/10 to-teal-500/5 rounded-full blur-[80px] pointer-events-none" />
+      {/* MULTILINGUAL AI CENTERPIECE SHOWCASE */}
+      <div className="bg-neutral-950 rounded-[32px] border border-zinc-800/90 p-6 md:p-10 relative overflow-hidden shadow-2xl">
+        <div className="absolute top-0 right-0 w-[350px] h-[350px] bg-emerald-500/10 rounded-full blur-[100px] pointer-events-none" />
         
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10 text-left">
-          {/* Conversation description */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
+          
           <div className="lg:col-span-5 space-y-6">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 rounded-md font-mono text-[9.5px] uppercase tracking-wider font-semibold">
-              <Sparkles className="w-3.5 h-3.5 shrink-0" /> AI Agricultural centerpiece
+            <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-lg text-[10px] font-mono uppercase tracking-wider font-bold">
+              <Sparkles className="w-3.5 h-3.5 shrink-0" /> Interactive AI Co-Pilot
             </div>
-            <h3 className="text-2xl md:text-3.5xl font-sans font-bold text-white tracking-tight uppercase leading-tight">
-              AGRICULTURE CO-PILOT THAT FEELS ALIVE.
+            
+            <h3 className="text-2xl md:text-3xl font-extrabold text-white tracking-tight uppercase leading-tight font-sans">
+              SPEAK YOUR REGIONAL LANGUAGE. GET INSTANT ANSWERS.
             </h3>
-            <p className="text-xs md:text-sm text-zinc-400 font-sans leading-relaxed font-bold">
-              Select your regional language or dial in voice telemetry. The system reacts instantly to advise soil moisture thresholds, solar Backplanes, weather forecasts, and crop disease protection.
+            
+            <p className="text-xs md:text-sm text-zinc-300 leading-relaxed font-medium">
+              AgroSensiX connects directly to Google Gemini models to assist farmers in 8 languages. Select a dialect below to test the live translation and diagnostic capability.
             </p>
 
-            {/* Language Selection Grid */}
+            {/* Language buttons */}
             <div className="space-y-2">
-              <span className="text-[9.5px] font-mono text-zinc-550 uppercase tracking-widest font-semibold block">Select Active Interface Language</span>
-              <div className="grid grid-cols-4 gap-1.5 font-mono text-[9.5px]">
+              <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-widest font-bold block">Select Active Interface Dialect</span>
+              <div className="grid grid-cols-4 gap-2 font-mono text-[10px]">
                 {languages.map((l) => (
                   <button
                     key={l.code}
                     onClick={() => setActiveLang(l.code as any)}
-                    className={`p-2 rounded-lg border text-center font-bold tracking-wide transition-all truncate cursor-pointer ${
+                    className={`p-2 rounded-xl border text-center font-bold tracking-wide transition-all cursor-pointer ${
                       activeLang === l.code
-                        ? "bg-emerald-500/10 border-emerald-405 text-emerald-400 shadow-[0_0_10px_rgba(16,185,129,0.1)]"
-                        : "bg-zinc-900/50 border-zinc-900 text-zinc-500 hover:text-zinc-300"
+                        ? "bg-emerald-500/20 border-emerald-400 text-emerald-300 shadow-[0_0_12px_rgba(16,185,129,0.2)]"
+                        : "bg-zinc-900/60 border-zinc-800/80 text-zinc-400 hover:text-white"
                     }`}
                   >
-                    {l.name.split(" ")[0]}
+                    {l.name}
                   </button>
                 ))}
               </div>
             </div>
 
-            {/* Micro Interactivity details */}
-            <div className="flex items-center gap-3 font-mono text-[10px] text-zinc-500 uppercase font-bold">
-              <CheckCircle className="w-4 h-4 text-emerald-400" /> English, Hindi, Punjabi, Tamil & More Included
+            <div className="flex items-center gap-2 text-xs font-mono text-emerald-400 font-bold">
+              <CheckCircle className="w-4 h-4 shrink-0" />
+              <span>Full Voice Synthesis & Regional Dialects Supported</span>
             </div>
           </div>
 
-          {/* Interactive Mockup AI Assistant */}
-          <div className="lg:col-span-7 bg-zinc-950 border border-zinc-900 rounded-2xl p-5 md:p-6 space-y-4 shadow-xl">
-            {/* Header layout */}
-            <div className="flex items-center justify-between border-b border-zinc-900/60 pb-3">
-              <div className="flex items-center gap-2.5">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-emerald-500 to-cyan-400 p-0.5 flex items-center justify-center shadow-lg shadow-emerald-950/20">
-                  <div className="w-full h-full bg-zinc-950 rounded-[10px] flex items-center justify-center text-emerald-400">
-                    <Bot className="w-5 h-5 shrink-0" />
-                  </div>
+          <div className="lg:col-span-7 bg-zinc-950 border border-zinc-800 rounded-2xl p-6 space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-zinc-800/80 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/30 flex items-center justify-center text-emerald-400">
+                  <Bot className="w-5 h-5 shrink-0" />
                 </div>
                 <div>
-                  <h4 className="text-xs font-sans font-bold text-zinc-100 uppercase tracking-wide">AgriOS Core Assistant</h4>
-                  <span className="text-[9px] font-mono text-emerald-400 block tracking-wider uppercase font-semibold">● ACTIVE CLIENT BACKPLANE</span>
+                  <h4 className="text-xs font-bold text-white uppercase tracking-wider">AgriOS Core Assistant</h4>
+                  <span className="text-[10px] font-mono text-emerald-400 block uppercase font-semibold">● GEMINI AI ONLINE</span>
                 </div>
               </div>
 
-              {/* Fake speech indicator */}
               <button 
                 onClick={() => setIsVoiceActive(!isVoiceActive)}
-                className={`px-3 py-1.5 rounded-lg border font-mono text-[9px] font-semibold flex items-center gap-1.5 transition-all text-center uppercase tracking-wide cursor-pointer ${
+                className={`px-3 py-1.5 rounded-xl border font-mono text-[10px] font-bold flex items-center gap-2 transition-all uppercase tracking-wider cursor-pointer ${
                   isVoiceActive 
-                    ? "bg-cyan-500/10 border-cyan-400 text-cyan-300 shadow-[0_0_10px_rgba(34,211,238,0.15)] animate-pulse" 
-                    : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-cyan-400 hover:border-cyan-550/25"
+                    ? "bg-cyan-500/20 border-cyan-400 text-cyan-300 shadow-[0_0_12px_rgba(34,211,238,0.2)] animate-pulse" 
+                    : "bg-zinc-900 border-zinc-800 text-zinc-400 hover:text-white"
                 }`}
               >
                 <Volume2 className="w-3.5 h-3.5 shrink-0" />
-                {isVoiceActive ? "Listening (Voice Mode)" : "Voice Inactive"}
+                {isVoiceActive ? "Voice Stream Active" : "Enable Voice"}
               </button>
             </div>
 
-            {/* Chat Body Mockup screen */}
-            <div className="min-h-[160px] bg-zinc-950/80 border border-zinc-900 p-4.5 rounded-xl space-y-4 font-sans text-xs flex flex-col justify-between">
-              
-              {/* User Question */}
-              <div className="flex items-start gap-2.5 max-w-[85%] self-end flex-row-reverse">
-                <div className="w-7 h-7 bg-zinc-800 border border-zinc-700/80 rounded-md flex items-center justify-center text-zinc-300 text-[10px] shrink-0 font-bold">U</div>
-                <div className="bg-zinc-900 border border-zinc-850 p-2.5 rounded-2xl text-zinc-300 font-bold leading-normal">
+            <div className="min-h-[170px] bg-neutral-950 border border-zinc-900 p-5 rounded-xl space-y-4 text-xs font-sans flex flex-col justify-between">
+              <div className="flex items-start gap-3 max-w-[88%] self-end flex-row-reverse">
+                <div className="w-7 h-7 bg-zinc-800 border border-zinc-700 rounded-lg flex items-center justify-center text-zinc-200 text-[10px] shrink-0 font-bold">F</div>
+                <div className="bg-zinc-900 border border-zinc-800 p-3 rounded-2xl text-zinc-200 font-medium leading-relaxed">
                   {aiResponses[activeLang].question}
                 </div>
               </div>
 
-              {/* AI Answer with simulated voice bars if active */}
-              <div className="flex items-start gap-2.5 max-w-[85%]">
-                <div className="w-7 h-7 bg-emerald-500/10 border border-emerald-500/20 rounded-md flex items-center justify-center text-emerald-400 shrink-0 font-bold">AI</div>
-                <div className="bg-[#081e28] border border-cyan-900/30 p-2.5 rounded-2xl text-zinc-200">
-                  <p className="leading-relaxed font-bold font-sans text-xs">{aiResponseText}</p>
-                  
-                  {isAiTyping && (
-                    <span className="inline-block w-1.5 h-4 bg-emerald-400 animate-pulse ml-0.5" />
-                  )}
-
-                  {/* Simulated Voice Waveform */}
-                  {isVoiceActive && (
-                    <div className="flex items-center gap-1 mt-2.5 border-t border-cyan-950/60 pt-2 text-[#22D3EE] font-mono text-[9px] uppercase tracking-wider font-semibold">
-                      <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping inline-block shrink-0" />
-                      Voice Synthesis Streaming...
-                      <div className="flex items-end gap-0.5 h-3.5 ml-2">
-                        <div className="w-0.5 bg-cyan-400 h-2.5 animate-bounce" style={{ animationDelay: "0.1s" }} />
-                        <div className="w-0.5 bg-cyan-400 h-3.5 animate-bounce" style={{ animationDelay: "0.3s" }} />
-                        <div className="w-0.5 bg-cyan-400 h-1.5 animate-bounce" style={{ animationDelay: "0.5s" }} />
-                        <div className="w-0.5 bg-cyan-400 h-3 animate-bounce" style={{ animationDelay: "0.2s" }} />
-                      </div>
-                    </div>
-                  )}
+              <div className="flex items-start gap-3 max-w-[88%]">
+                <div className="w-7 h-7 bg-emerald-500/20 border border-emerald-500/30 rounded-lg flex items-center justify-center text-emerald-400 shrink-0 font-bold">AI</div>
+                <div className="bg-[#051c27] border border-cyan-900/40 p-3 rounded-2xl text-zinc-100 font-medium">
+                  <p className="leading-relaxed">{aiResponseText}</p>
+                  {isAiTyping && <span className="inline-block w-2 h-4 bg-emerald-400 animate-pulse ml-1" />}
                 </div>
               </div>
-
             </div>
 
-            {/* Supportive instructions mock info line */}
-            <div className="flex items-center justify-between text-[10px] font-mono text-zinc-550 border-t border-zinc-900/40 pt-3">
-              <span>ACTIVE MODEL: GEMINI AI FLASH</span>
+            <div className="flex items-center justify-between text-[11px] font-mono border-t border-zinc-900 pt-3">
+              <span className="text-zinc-500">MODEL: GEMINI 2.5 FLASH</span>
               <button 
                 onClick={() => onNavigate(NavigationPage.AI_ASSISTANT)}
-                className="text-emerald-400 hover:underline uppercase font-bold tracking-wider cursor-pointer"
+                className="text-emerald-400 hover:text-emerald-300 uppercase font-bold tracking-wider cursor-pointer"
               >
-                OPEN FULL AI CONSOLE →
+                Open Full AI Assistant →
               </button>
             </div>
           </div>
+
         </div>
       </div>
 
-      {/* QUICK STATUS PORTAL AT-A-GLANCE MAP PREVIEW */}
+      {/* QUICK FIELD STATUS PREVIEW */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         
-        {/* Greenhouse status */}
-        <div className="bg-zinc-950/45 backdrop-blur-md border border-zinc-900/90 rounded-2xl p-6 hover:border-emerald-500/20 duration-300 relative text-left shadow-lg">
-          <div className="flex justify-between items-center border-b border-zinc-900 pb-3.5 mb-3.5">
-            <span className="text-zinc-200 font-bold uppercase tracking-wider flex items-center gap-2">
-              <Sprout className="w-4.5 h-4.5 text-emerald-400 animate-pulse" />
+        <div className="bg-neutral-950 border border-zinc-800/90 rounded-2xl p-6 space-y-4 hover:border-emerald-500/30 transition-all shadow-xl">
+          <div className="flex justify-between items-center border-b border-zinc-900 pb-3">
+            <span className="text-white font-bold uppercase tracking-wider flex items-center gap-2 text-sm">
+              <Sprout className="w-5 h-5 text-emerald-400" />
               Greenhouse 14 (Mixed Crops)
             </span>
-            <span className="px-3.5 py-1 bg-emerald-500/10 border border-emerald-500/20 shadow-[0_0_12px_rgba(16,185,129,0.05)] rounded-full text-emerald-450 font-bold text-[10px] font-mono tracking-widest uppercase">
-              Excellent {plantHealthIndexG14}%
+            <span className="px-3 py-1 bg-emerald-500/10 border border-emerald-500/30 rounded-full text-emerald-300 font-bold text-[10px] font-mono uppercase">
+              Index {plantHealthIndexG14}%
             </span>
           </div>
-          <p className="text-xs text-zinc-400 leading-normal mb-4 font-bold font-sans">
-            Home to mixed crops and high-moisture indicators. Underground soil sensors detect highly optimal roots moisture, with direct connection stabilized via LAN transceivers. 
+          <p className="text-xs text-zinc-400 leading-relaxed font-medium">
+            Sensors confirm optimal root moisture and solar power backplane level. Automated drip solenoid valve is currently standby.
           </p>
-          <div className="flex justify-between text-[11px] font-mono text-zinc-550 font-bold">
-            <span>Soil moisture status:</span>
+          <div className="flex justify-between text-xs font-mono text-zinc-400 border-t border-zinc-900 pt-3">
+            <span>Soil Moisture:</span>
             <span className="text-emerald-400 font-bold">52.4% (Nominal)</span>
           </div>
         </div>
 
-        {/* Orchard Hub */}
-        <div className="bg-zinc-950/45 backdrop-blur-md border border-zinc-900/90 rounded-2xl p-6 hover:border-cyan-500/20 duration-300 relative text-left shadow-lg">
-          <div className="flex justify-between items-center border-b border-zinc-900 pb-3.5 mb-3.5">
-            <span className="text-zinc-200 font-bold uppercase tracking-wider flex items-center gap-2">
-              <Sprout className="w-4.5 h-4.5 text-emerald-400" />
+        <div className="bg-neutral-950 border border-zinc-800/90 rounded-2xl p-6 space-y-4 hover:border-cyan-500/30 transition-all shadow-xl">
+          <div className="flex justify-between items-center border-b border-zinc-900 pb-3">
+            <span className="text-white font-bold uppercase tracking-wider flex items-center gap-2 text-sm">
+              <Sprout className="w-5 h-5 text-cyan-400" />
               Orchard Hub 7 (Dwarf Oranges)
             </span>
-            <span className="px-3.5 py-1 bg-emerald-500/10 border border-emerald-500/20 shadow-[0_0_12px_rgba(16,185,129,0.05)] rounded-full text-emerald-455 font-bold text-[10px] font-mono tracking-widest uppercase">
-              Healthy {plantHealthIndex7G}%
+            <span className="px-3 py-1 bg-cyan-500/10 border border-cyan-500/30 rounded-full text-cyan-300 font-bold text-[10px] font-mono uppercase">
+              Index {plantHealthIndex7G}%
             </span>
           </div>
-          <p className="text-xs text-zinc-400 leading-normal mb-4 font-bold font-sans">
-            Deep-soil interval system feeding high-exposure Dwarf orange groves. Smart algorithms automatically adjust water valves with minimal energy footprints.
+          <p className="text-xs text-zinc-400 leading-relaxed font-medium">
+            Deep soil moisture transducers reporting stable hydration. Solar battery reserve charged at 98.4%.
           </p>
-          <div className="flex justify-between text-[11px] font-mono text-zinc-550 font-bold">
-            <span>Soil moisture status:</span>
-            <span className="text-emerald-400 font-bold">41.0% (Stable)</span>
+          <div className="flex justify-between text-xs font-mono text-zinc-400 border-t border-zinc-900 pt-3">
+            <span>Soil Moisture:</span>
+            <span className="text-cyan-400 font-bold">41.0% (Stable)</span>
           </div>
         </div>
 
       </div>
 
-      {/* WATCH DEMO MODAL SCREEN */}
+      {/* DEMO VIDEO MODAL */}
       {showDemoModal && (
         <div className="fixed inset-0 bg-neutral-950/90 backdrop-blur-md z-50 flex items-center justify-center p-4">
-          <div className="bg-[#0b1c2d] border border-zinc-800 rounded-3xl max-w-2xl w-full p-6 md:p-8 space-y-6 relative text-center shadow-2xl overflow-hidden">
-            <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-2xl pointer-events-none" />
-            
+          <div className="bg-[#07131e] border border-zinc-800 rounded-3xl max-w-2xl w-full p-6 md:p-8 space-y-6 relative text-center shadow-2xl">
             <button 
               onClick={() => setShowDemoModal(false)}
-              className="absolute top-4 right-4 text-zinc-400 hover:text-white font-mono text-sm uppercase font-bold cursor-pointer bg-zinc-900 border border-zinc-805 p-1 px-2.5 rounded-lg"
+              className="absolute top-4 right-4 text-zinc-400 hover:text-white font-mono text-xs uppercase font-bold cursor-pointer bg-zinc-900 border border-zinc-800 px-3 py-1.5 rounded-xl"
             >
               Close ✕
             </button>
 
             <div className="space-y-2">
-              <span className="text-[10px] bg-cyan-950/60 border border-cyan-805 text-cyan-300 font-mono p-1 px-3.5 rounded-full uppercase font-bold tracking-widest">Interactive Video Demo Walkthrough</span>
-              <h3 className="text-xl md:text-2xl font-bold font-sans text-white uppercase mt-2">AgroSensiX operating system presentation</h3>
+              <span className="text-[10px] bg-emerald-950 border border-emerald-500/30 text-emerald-300 font-mono px-3 py-1 rounded-full uppercase font-bold tracking-widest">System Presentation</span>
+              <h3 className="text-2xl font-bold font-sans text-white uppercase mt-1">AgroSensiX Operating System Overview</h3>
             </div>
 
-            {/* Video Mockup Frame */}
-            <div className="aspect-video bg-zinc-950 border border-zinc-900 rounded-xl flex flex-col items-center justify-center p-6 text-center space-y-4 relative overflow-hidden group">
-              <div className="absolute inset-0 bg-cover bg-center opacity-40 mix-blend-multiply" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1530595467537-0b5996c41f2d?auto=format&fit=crop&q=80&w=800')` }} />
+            <div className="aspect-video bg-neutral-950 border border-zinc-800 rounded-2xl flex flex-col items-center justify-center p-6 text-center space-y-4 relative overflow-hidden group">
+              <div className="absolute inset-0 bg-cover bg-center opacity-30" style={{ backgroundImage: `url('https://images.unsplash.com/photo-1530595467537-0b5996c41f2d?auto=format&fit=crop&q=80&w=800')` }} />
               
-              <div className="w-16 h-16 rounded-full bg-emerald-500 hover:bg-emerald-400 flex items-center justify-center text-neutral-950 text-xl font-bold cursor-pointer group-hover:scale-110 duration-300 shadow-[0_0_20px_rgba(16,185,129,0.3)] select-none relative z-10">
+              <div className="w-16 h-16 rounded-full bg-emerald-500 hover:bg-emerald-400 flex items-center justify-center text-neutral-950 text-xl font-bold cursor-pointer group-hover:scale-110 duration-300 shadow-[0_0_25px_rgba(16,185,129,0.4)] relative z-10">
                 ▶
               </div>
               
               <div className="space-y-1 relative z-10">
-                <p className="text-xs font-mono text-zinc-200 uppercase tracking-widest font-bold">Play Concept Demo Trailer (120s)</p>
-                <p className="text-[10px] text-zinc-500 font-mono">Stream stabilized via local Progressive cache workers</p>
+                <p className="text-xs font-mono text-zinc-200 uppercase tracking-widest font-bold">Play AgroSensiX Field Walkthrough (120s)</p>
+                <p className="text-[10px] text-zinc-400 font-mono">Streamed securely via local PWA cache worker</p>
               </div>
             </div>
 
-            <p className="text-[11px] font-sans text-zinc-400 max-w-lg mx-auto font-bold">
-              Watch how our underwater custom ESP32 IoT sensors communicate real-time water flow, greenhouse solar thresholds, and offline Gemini coordination to save over 34,250 Liters of fresh irrigation water this season.
+            <p className="text-xs font-sans text-zinc-300 font-medium">
+              See how our custom ESP32 IoT sensors communicate real-time moisture data, solar panel power, and offline Gemini AI coordination to save over 148,000 Liters of water this season.
             </p>
 
             <button 
@@ -611,7 +557,7 @@ export const HomeView: React.FC<HomeViewProps> = ({
                 setShowDemoModal(false);
                 onNavigate(NavigationPage.DASHBOARD);
               }}
-              className="px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-sans font-bold text-xs uppercase tracking-widest rounded-xl transition-all cursor-pointer w-full"
+              className="px-6 py-3.5 bg-emerald-500 hover:bg-emerald-400 text-neutral-950 font-sans font-bold text-xs uppercase tracking-widest rounded-xl transition-all cursor-pointer w-full"
             >
               Enter Farm Command Center
             </button>
