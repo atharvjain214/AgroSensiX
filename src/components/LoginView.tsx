@@ -1,22 +1,25 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
-  RefreshCw, 
-  Key, 
-  ArrowRight, 
-  Sprout, 
   ShieldCheck, 
-  Droplets, 
-  Layers, 
-  Sun, 
-  Globe,
-  Mail,
-  User,
-  Eye,
-  EyeOff
+  Lock, 
+  Mail, 
+  User, 
+  ArrowRight, 
+  RefreshCw, 
+  Eye, 
+  EyeOff, 
+  X,
+  Key
 } from "lucide-react";
-import { PasswordStrength } from "./PasswordStrength";
-import { auth } from "../firebase";
-import { GoogleAuthProvider, signInWithPopup } from "firebase/auth";
+import { auth, db } from "../firebase";
+import { doc, getDoc, setDoc } from "firebase/firestore";
+import { 
+  GoogleAuthProvider, 
+  signInWithPopup, 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  updateProfile
+} from "firebase/auth";
 
 interface LoginViewProps {
   onSuccessLogin: (userName: string) => void;
@@ -26,8 +29,13 @@ interface LoginViewProps {
 export const LoginView: React.FC<LoginViewProps> = ({ onSuccessLogin, onCancel }) => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [isForgotPassword, setIsForgotPassword] = useState(false);
+  
+  // Recovery States
   const [isRecoveryCodeSent, setIsRecoveryCodeSent] = useState(false);
   const [isCodeVerified, setIsCodeVerified] = useState(false);
+  const [recoveryCode, setRecoveryCode] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
   
   // Form States
   const [fullName, setFullName] = useState("");
@@ -36,41 +44,54 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccessLogin, onCancel }
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
 
-  // Forgot Password States
   const [forgotEmail, setForgotEmail] = useState("");
-  const [recoveryCode, setRecoveryCode] = useState("");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmNewPassword, setConfirmNewPassword] = useState("");
   
   const [isScanning, setIsScanning] = useState(false);
   const [errorText, setErrorText] = useState<string | null>(null);
   const [successText, setSuccessText] = useState<string | null>(null);
-  const [activeStat, setActiveStat] = useState<number | null>(null);
 
   // Login attempt protection states
   const [failedAttempts, setFailedAttempts] = useState<number>(() => {
-    const cached = localStorage.getItem("agrosensix_failed_attempts");
-    return cached ? parseInt(cached, 10) : 0;
+    if (typeof window !== "undefined") {
+      return parseInt(localStorage.getItem("agrosensix_failed_attempts") || "0");
+    }
+    return 0;
   });
-  
   const [lockoutUntil, setLockoutUntil] = useState<number>(() => {
-    const cached = localStorage.getItem("agrosensix_lockout_until");
-    return cached ? parseInt(cached, 10) : 0;
+    if (typeof window !== "undefined") {
+      return parseInt(localStorage.getItem("agrosensix_lockout_until") || "0");
+    }
+    return 0;
   });
 
-  const getRemainingLockoutTime = (): number => {
+  const getRemainingLockoutTime = () => {
     const now = Date.now();
-    if (lockoutUntil > now) {
+    if (now < lockoutUntil) {
       return Math.ceil((lockoutUntil - now) / 1000);
     }
     return 0;
   };
 
+  useEffect(() => {
+    let interval: any;
+    if (lockoutUntil > Date.now()) {
+      interval = setInterval(() => {
+        if (Date.now() >= lockoutUntil) {
+          setLockoutUntil(0);
+          localStorage.removeItem("agrosensix_lockout_until");
+          setErrorText(null);
+          clearInterval(interval);
+        }
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [lockoutUntil]);
+
   const handleFailedAttempt = () => {
     const nextFailed = failedAttempts + 1;
     setFailedAttempts(nextFailed);
     localStorage.setItem("agrosensix_failed_attempts", nextFailed.toString());
-
+    
     if (nextFailed >= 5) {
       const lockoutTime = Date.now() + 30000; // 30 seconds lockout
       setLockoutUntil(lockoutTime);
@@ -92,41 +113,43 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccessLogin, onCancel }
     setErrorText(null);
     setSuccessText(null);
     setIsScanning(true);
-
     try {
-      let googleUser: any = null;
-      try {
-        const provider = new GoogleAuthProvider();
-        const result = await signInWithPopup(auth, provider);
-        googleUser = result.user;
-      } catch (popupErr: any) {
-        console.warn("Firebase Google popup note:", popupErr?.message);
-      }
-
-      // Call server API route
-      const response = await fetch("/api/auth/google", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: googleUser?.email || "google_user@agrosensix.com",
-          fullName: googleUser?.displayName || "Google Agronomist",
-          uid: googleUser?.uid || "google_" + Date.now(),
-          photoURL: googleUser?.photoURL || null
-        })
+      const provider = new GoogleAuthProvider();
+      provider.setCustomParameters({
+        prompt: 'select_account consent'
       });
-
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Google authentication failed.");
+      const result = await signInWithPopup(auth, provider);
+      const googleUser = result.user;
+      
+      const userRef = doc(db, "users", googleUser.uid);
+      const userSnap = await getDoc(userRef);
+      if (!userSnap.exists()) {
+        await setDoc(userRef, {
+          uid: googleUser.uid,
+          email: googleUser.email,
+          fullName: googleUser.displayName || "Google Agronomist",
+          role: "Farmer",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          lastLogin: new Date().toISOString(),
+          profileImage: googleUser.photoURL || "",
+          accountStatus: "active",
+          emailVerified: googleUser.emailVerified,
+        });
+      } else {
+        await setDoc(userRef, {
+          lastLogin: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          profileImage: googleUser.photoURL || userSnap.data()?.profileImage || ""
+        }, { merge: true });
+      }
 
       setSuccessText(isSignUp ? "Account created with Google" : "Signed in with Google");
       resetFailedAttempts();
-      localStorage.setItem("agrosensix_auth_token", data.token);
-
       setTimeout(() => {
         setIsScanning(false);
-        onSuccessLogin(data.user.fullName || "Google Agronomist");
+        onSuccessLogin(googleUser.displayName || "Google Agronomist");
       }, 1000);
-
     } catch (err: any) {
       setIsScanning(false);
       setErrorText(err.message || "Google authentication failed.");
@@ -171,34 +194,37 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccessLogin, onCancel }
     }
     
     setIsScanning(true);
-
     try {
-      const endpoint = isSignUp ? "/api/auth/register" : "/api/auth/login";
-      const payload = isSignUp 
-        ? { fullName: fullName.trim(), email: email.trim(), password }
-        : { email: email.trim(), password };
-
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
-      });
-      
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.error || "Authentication failed.");
+      if (isSignUp) {
+        const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
+        await updateProfile(userCredential.user, { displayName: fullName.trim() });
+        
+        await setDoc(doc(db, "users", userCredential.user.uid), {
+          uid: userCredential.user.uid,
+          email: userCredential.user.email,
+          fullName: fullName.trim(),
+          role: "Farmer",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          lastLogin: new Date().toISOString(),
+          profileImage: "",
+          accountStatus: "active",
+          emailVerified: false,
+        });
+      } else {
+        const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
+        await setDoc(doc(db, "users", userCredential.user.uid), {
+          lastLogin: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
       }
       
       setSuccessText(isSignUp ? "Registration Successful" : "Access Granted");
       resetFailedAttempts();
       
-      // Store token
-      localStorage.setItem("agrosensix_auth_token", data.token);
-      
       setTimeout(() => {
         setIsScanning(false);
-        onSuccessLogin(data.user.fullName || "User");
+        onSuccessLogin(auth.currentUser?.displayName || "User");
       }, 1000);
       
     } catch (err: any) {
@@ -217,242 +243,128 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccessLogin, onCancel }
     setIsScanning(true);
     setErrorText(null);
     setSuccessText(null);
-
     try {
-      const response = await fetch("/api/auth/recover/send-code", {
+      const res = await fetch("/api/auth/recover/send-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: forgotEmail.trim() })
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Failed to send code.");
-
-      setSuccessText(data.message || "6-digit verification code dispatched from agrosensix@gmail.com!");
-      setTimeout(() => {
+      const data = await res.json();
+      if (res.ok) {
         setIsRecoveryCodeSent(true);
-        setSuccessText(null);
-        setIsScanning(false);
-      }, 1500);
+        if (data.emailSent) {
+          setSuccessText("Secure 6-digit code dispatched to your email!");
+        } else {
+          setSuccessText("Code dispatched! (Dev Mode: Check terminal for the code)");
+        }
+      } else {
+        setErrorText(data.error || "Failed to send code");
+      }
     } catch (err: any) {
+      setErrorText(err.message || "Network error");
+    } finally {
       setIsScanning(false);
-      setErrorText(err.message);
     }
   };
 
   const handleVerifyCode = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!recoveryCode.trim()) {
-      setErrorText("Verification code is required.");
+    if (recoveryCode.length !== 6) {
+      setErrorText("Code must be exactly 6 digits.");
       return;
     }
     setIsScanning(true);
     setErrorText(null);
-
     try {
-      const response = await fetch("/api/auth/recover/verify-code", {
+      const res = await fetch("/api/auth/recover/verify-code", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: forgotEmail.trim(), code: recoveryCode.trim() })
+        body: JSON.stringify({ email: forgotEmail.trim(), code: recoveryCode })
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Invalid code.");
-
-      setSuccessText("Code verified successfully.");
-      setTimeout(() => {
+      const data = await res.json();
+      if (res.ok) {
         setIsCodeVerified(true);
-        setSuccessText(null);
-        setIsScanning(false);
-      }, 1000);
+        setSuccessText("Code verified successfully. Please enter your new password.");
+      } else {
+        setErrorText(data.error || "Invalid or expired code.");
+      }
     } catch (err: any) {
+      setErrorText(err.message || "Network error");
+    } finally {
       setIsScanning(false);
-      setErrorText(err.message);
     }
   };
 
   const handleResetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (newPassword.length < 8 || !/[A-Z]/.test(newPassword) || !/[a-z]/.test(newPassword) || !/[0-9]/.test(newPassword) || !/[!@#$%^&*()_+\-=]/.test(newPassword)) {
-      setErrorText("Please meet all password requirements.");
-      return;
-    }
     if (newPassword !== confirmNewPassword) {
       setErrorText("Passwords do not match.");
       return;
     }
-
+    if (newPassword.length < 8) {
+      setErrorText("Password must be at least 8 characters.");
+      return;
+    }
     setIsScanning(true);
     setErrorText(null);
-
     try {
-      const response = await fetch("/api/auth/recover/reset-password", {
+      const res = await fetch("/api/auth/recover/reset-password", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ 
-          email: forgotEmail.trim(), 
-          code: recoveryCode.trim(),
-          newPassword 
-        })
+        body: JSON.stringify({ email: forgotEmail.trim(), code: recoveryCode, newPassword })
       });
-      const data = await response.json();
-      if (!response.ok) throw new Error(data.error || "Failed to reset password.");
-
-      setSuccessText("Password changed successfully.");
-      setTimeout(() => {
-        setIsForgotPassword(false);
-        setIsRecoveryCodeSent(false);
-        setIsCodeVerified(false);
-        setForgotEmail("");
-        setRecoveryCode("");
-        setNewPassword("");
-        setConfirmNewPassword("");
-        setSuccessText(null);
-        setIsScanning(false);
-      }, 2000);
+      const data = await res.json();
+      if (res.ok) {
+        setSuccessText("Password successfully updated. You may now login.");
+        setTimeout(() => {
+          setIsForgotPassword(false);
+          setIsCodeVerified(false);
+          setIsRecoveryCodeSent(false);
+          setSuccessText(null);
+        }, 3000);
+      } else {
+        setErrorText(data.error || "Failed to reset password.");
+      }
     } catch (err: any) {
+      setErrorText(err.message || "Network error");
+    } finally {
       setIsScanning(false);
-      setErrorText(err.message);
     }
   };
 
-  const impactStats = [
-    {
-      id: 1,
-      num: "1.2M+",
-      label: "Water Saved",
-      detail: "Gallons saved across high-precision automated drip networks.",
-      icon: Droplets,
-      color: "text-cyan-400",
-      bgClass: "bg-cyan-500/10 border-cyan-500/20"
-    },
-    {
-      id: 2,
-      num: "450+",
-      label: "Acres Monitored",
-      detail: "Active high-yield orchards and multi-span green houses globally.",
-      icon: Layers,
-      color: "text-emerald-400",
-      bgClass: "bg-emerald-500/10 border-emerald-500/20"
-    },
-    {
-      id: 3,
-      num: "12,800+",
-      label: "Irrigation Runs",
-      detail: "Closed-loop, automatic soil transpiration micro-pulses.",
-      icon: Sprout,
-      color: "text-emerald-350",
-      bgClass: "bg-emerald-450/10 border-emerald-450/20"
-    },
-    {
-      id: 4,
-      num: "34.2K+",
-      label: "kWh Solar Run",
-      detail: "Eco energy produced via standalone hardware panel backups.",
-      icon: Sun,
-      color: "text-amber-400",
-      bgClass: "bg-amber-500/10 border-amber-500/20"
-    }
-  ];
-
   return (
-    <div className="min-h-[85vh] flex flex-col items-center justify-center py-10 px-4 relative">
-      <div className="absolute top-[5%] left-[10%] w-[350px] h-[350px] bg-cyan-500/5 rounded-full blur-[110px] pointer-events-none" />
-      <div className="absolute bottom-[5%] right-[10%] w-[350px] h-[350px] bg-emerald-500/5 rounded-full blur-[110px] pointer-events-none" />
-
-      <div id="login-framework-card" className="max-w-5xl w-full bg-[#040c14]/80 backdrop-blur-3xl border border-zinc-800/80 rounded-3xl overflow-hidden shadow-2xl relative z-10 flex flex-col lg:flex-row animate-fade-in text-left">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/90 backdrop-blur-md animate-fade-in">
+      <div className="bg-neutral-950 border border-zinc-800 rounded-3xl max-w-md w-full p-6 md:p-8 shadow-[0_0_80px_-15px_rgba(16,185,129,0.15)] relative overflow-hidden text-center">
         
-        {/* LEFT COLUMN */}
-        <div className="lg:w-1/2 p-8 md:p-12 lg:p-14 flex flex-col justify-between bg-gradient-to-br from-emerald-950/20 via-zinc-950/60 to-[#020910] border-b lg:border-b-0 lg:border-r border-zinc-900 relative">
-          <div className="absolute inset-0 bg-[#02231b]/5 opacity-20 bg-[linear-gradient(to_right,rgba(16,185,129,0.015)_1px,transparent_1px),linear-gradient(to_bottom,rgba(16,185,129,0.015)_1px,transparent_1px)] bg-[size:30px_30px] pointer-events-none" />
-          
-          <div className="space-y-8 relative z-10">
-            <div className="flex items-center gap-3.5">
-              <div className="p-3 bg-emerald-500/10 border border-emerald-500/20 rounded-xl text-emerald-400 shadow-[0_0_15px_rgba(16,185,129,0.08)]">
-                <Sprout className="w-5.5 h-5.5 shrink-0" />
-              </div>
-              <div>
-                <span className="font-sans text-sm font-black tracking-widest text-zinc-100 uppercase block">
-                  AGROSENSIX
-                </span>
-                <span className="text-[9px] font-mono text-emerald-400 font-bold uppercase block tracking-widest mt-1">
-                  Smart Farming OS
-                </span>
-              </div>
-            </div>
+        {onCancel && (
+          <button
+            onClick={onCancel}
+            className="absolute top-6 right-6 p-2 bg-zinc-900/50 hover:bg-zinc-800 rounded-full text-zinc-400 hover:text-white transition-colors cursor-pointer z-10"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
 
-            <div className="space-y-4">
-              <h1 className="text-3xl md:text-4xl font-sans font-black tracking-tight text-white leading-tight">
-                Smarter Farming <br className="hidden md:inline" />Starts Here
-              </h1>
-              <p className="text-zinc-400 text-sm md:text-base font-sans font-medium leading-relaxed max-w-md">
-                Monitor crops. Save water. Protect harvests. Powered by AI.
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <span className="text-[10px] font-mono text-zinc-500 uppercase tracking-widest block font-bold">
-                Platform Impact Statistics
-              </span>
-              <div className="grid grid-cols-2 gap-3.5">
-                {impactStats.map((stat) => {
-                  const Icon = stat.icon;
-                  const isActive = activeStat === stat.id;
-                  return (
-                    <div 
-                      key={stat.id}
-                      onMouseEnter={() => setActiveStat(stat.id)}
-                      onMouseLeave={() => setActiveStat(null)}
-                      className={`p-4 rounded-2xl border transition-all duration-300 relative cursor-default ${
-                        isActive 
-                        ? `${stat.bgClass} scale-[1.02] shadow-lg` 
-                        : "bg-zinc-950/40 border-zinc-900/60"
-                      }`}
-                    >
-                      <div className="flex items-center justify-between">
-                        <span className={`text-xl font-bold font-mono ${stat.color}`}>{stat.num}</span>
-                        <Icon className={`w-4 h-4 ${isActive ? stat.color : "text-zinc-600"} transition-colors`} />
-                      </div>
-                      <p className="text-[10.5px] font-sans font-bold text-zinc-300 uppercase tracking-wide mt-1.5 leading-none">{stat.label}</p>
-                      <p className={`text-[9.5px] font-sans text-zinc-500 leading-tight mt-1 transition-all ${isActive ? "opacity-100" : "opacity-0 h-0 overflow-hidden"}`}>
-                        {stat.detail}
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+        <div className="mb-6 flex flex-col items-center">
+          <div className="w-16 h-16 rounded-full bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 mb-4 shadow-[0_0_30px_rgba(16,185,129,0.2)]">
+            <ShieldCheck className="w-8 h-8" />
           </div>
+          <h2 className="text-xl md:text-2xl font-mono font-bold text-white tracking-tight">
+            {isForgotPassword ? "Secure Recovery" : isSignUp ? "System Registration" : "System Authorization"}
+          </h2>
+          <p className="text-xs text-zinc-400 font-sans mt-2 tracking-wide">
+            {isForgotPassword 
+              ? "Reset your AgroSensiX access credentials" 
+              : isSignUp 
+                ? "Create a new farm management profile" 
+                : "Enter credentials to access farm telemetry"}
+          </p>
         </div>
 
-        {/* RIGHT COLUMN */}
-        <div className="lg:w-1/2 p-8 md:p-12 lg:p-14 flex flex-col justify-between space-y-8 bg-zinc-950/30">
-          
+        <div className="space-y-4 relative z-10">
           {isForgotPassword ? (
-            <div className="space-y-6">
-              <div className="text-left">
-                <button 
-                  type="button"
-                  onClick={() => {
-                    setIsForgotPassword(false);
-                    setErrorText(null);
-                    setSuccessText(null);
-                  }}
-                  className="inline-flex items-center gap-1.5 text-[9.5px] font-mono text-zinc-520 hover:text-white uppercase transition-colors mb-6 cursor-pointer"
-                >
-                  ← Back to Login
-                </button>
-                <span className="text-[9.5px] font-mono text-[#06b6d4] uppercase tracking-widest font-black block">
-                  {isCodeVerified ? "Set New Password" : "Recover Your Account"}
-                </span>
-                <p className="text-xs text-zinc-500 mt-1.5 font-sans font-medium">
-                  {isCodeVerified 
-                    ? "Enter your new password below." 
-                    : isRecoveryCodeSent 
-                      ? "Enter the verification code sent to your email." 
-                      : "Enter your email address below. A verification code will be sent to the email address entered above."}
-                </p>
-              </div>
-
-              {!isRecoveryCodeSent ? (
+            <div className="space-y-4">
+              {!isRecoveryCodeSent && (
                 <form onSubmit={handleSendRecoveryCode} className="space-y-4 font-mono text-left">
                   <div className="space-y-1.5 text-xs">
                     <label className="text-zinc-500 uppercase tracking-widest font-bold">Email Address</label>
@@ -470,7 +382,6 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccessLogin, onCancel }
                       />
                       <Mail className="w-4 h-4 text-zinc-700 absolute left-3.5 top-3.5" />
                     </div>
-                    <p className="text-[10px] text-zinc-600 mt-1">A verification code will be sent to the email address entered above.</p>
                   </div>
 
                   {errorText && (
@@ -496,31 +407,33 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccessLogin, onCancel }
                     {isScanning ? (
                       <>
                         <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#000]" />
-                        <span>Sending Code...</span>
+                        <span>Sending Link...</span>
                       </>
                     ) : (
                       <>
-                        <span>Send Verification Code</span>
+                        <span>Send Reset Code</span>
                         <ArrowRight className="w-4 h-4 shrink-0" />
                       </>
                     )}
                   </button>
                 </form>
-              ) : !isCodeVerified ? (
+              )}
+
+              {isRecoveryCodeSent && !isCodeVerified && (
                 <form onSubmit={handleVerifyCode} className="space-y-4 font-mono text-left">
                   <div className="space-y-1.5 text-xs">
-                    <label className="text-zinc-500 uppercase tracking-widest font-bold">Verification Code</label>
+                    <label className="text-zinc-500 uppercase tracking-widest font-bold">6-Digit Code</label>
                     <div className="relative">
                       <input
                         type="text"
                         value={recoveryCode}
                         onChange={(e) => {
-                          setRecoveryCode(e.target.value);
+                          setRecoveryCode(e.target.value.replace(/\\D/g, '').slice(0, 6));
                           setErrorText(null);
                         }}
                         disabled={isScanning}
-                        placeholder="123456"
-                        className="w-full bg-neutral-950 border border-zinc-900 focus:border-emerald-500/40 rounded-xl py-3 pl-10 pr-4 text-xs text-zinc-200 focus:outline-none placeholder-zinc-805 tracking-[0.5em] font-black"
+                        placeholder="000000"
+                        className="w-full bg-neutral-950 border border-zinc-900 focus:border-emerald-500/40 rounded-xl py-3 pl-10 pr-4 text-xs text-zinc-200 focus:outline-none placeholder-zinc-805 tracking-widest text-center tracking-[0.5em]"
                       />
                       <Key className="w-4 h-4 text-zinc-700 absolute left-3.5 top-3.5" />
                     </div>
@@ -543,7 +456,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccessLogin, onCancel }
 
                   <button
                     type="submit"
-                    disabled={isScanning}
+                    disabled={isScanning || recoveryCode.length !== 6}
                     className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-450 hover:to-cyan-450 text-[#000] disabled:opacity-40 font-sans font-bold uppercase rounded-xl flex items-center justify-center gap-1.5 transition-all duration-300 cursor-pointer shadow-lg tracking-wider text-xs active:scale-[0.98] mt-2"
                   >
                     {isScanning ? (
@@ -559,50 +472,43 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccessLogin, onCancel }
                     )}
                   </button>
                 </form>
-              ) : (
+              )}
+
+              {isCodeVerified && (
                 <form onSubmit={handleResetPassword} className="space-y-4 font-mono text-left">
                   <div className="space-y-1.5 text-xs">
                     <label className="text-zinc-500 uppercase tracking-widest font-bold">New Password</label>
                     <div className="relative">
                       <input
-                        type={showPassword ? "text" : "password"}
+                        type="password"
                         value={newPassword}
                         onChange={(e) => {
                           setNewPassword(e.target.value);
                           setErrorText(null);
                         }}
                         disabled={isScanning}
-                        placeholder="Enter new password"
-                        className="w-full bg-neutral-950 border border-zinc-900 focus:border-emerald-500/40 rounded-xl py-3 pl-10 pr-10 text-xs text-zinc-200 focus:outline-none placeholder-zinc-805"
+                        placeholder="Min 8 chars, 1 uppercase, 1 special"
+                        className="w-full bg-neutral-950 border border-zinc-900 focus:border-emerald-500/40 rounded-xl py-3 pl-10 pr-4 text-xs text-zinc-200 focus:outline-none placeholder-zinc-805"
                       />
-                      <Key className="w-4 h-4 text-zinc-700 absolute left-3.5 top-3.5" />
-                      <button 
-                        type="button" 
-                        onClick={() => setShowPassword(!showPassword)}
-                        className="absolute right-3.5 top-3.5 text-zinc-600 hover:text-zinc-400 cursor-pointer"
-                      >
-                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
+                      <Lock className="w-4 h-4 text-zinc-700 absolute left-3.5 top-3.5" />
                     </div>
                   </div>
 
-                  <PasswordStrength password={newPassword} />
-
                   <div className="space-y-1.5 text-xs">
-                    <label className="text-zinc-500 uppercase tracking-widest font-bold">Confirm Password</label>
+                    <label className="text-zinc-500 uppercase tracking-widest font-bold">Confirm New Password</label>
                     <div className="relative">
                       <input
-                        type={showPassword ? "text" : "password"}
+                        type="password"
                         value={confirmNewPassword}
                         onChange={(e) => {
                           setConfirmNewPassword(e.target.value);
                           setErrorText(null);
                         }}
                         disabled={isScanning}
-                        placeholder="Confirm new password"
-                        className="w-full bg-neutral-950 border border-zinc-900 focus:border-emerald-500/40 rounded-xl py-3 pl-10 pr-10 text-xs text-zinc-200 focus:outline-none placeholder-zinc-805"
+                        placeholder="Re-type new password"
+                        className="w-full bg-neutral-950 border border-zinc-900 focus:border-emerald-500/40 rounded-xl py-3 pl-10 pr-4 text-xs text-zinc-200 focus:outline-none placeholder-zinc-805"
                       />
-                      <Key className="w-4 h-4 text-zinc-700 absolute left-3.5 top-3.5" />
+                      <Lock className="w-4 h-4 text-zinc-700 absolute left-3.5 top-3.5" />
                     </div>
                   </div>
 
@@ -629,40 +535,33 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccessLogin, onCancel }
                     {isScanning ? (
                       <>
                         <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#000]" />
-                        <span>Resetting...</span>
+                        <span>Updating...</span>
                       </>
                     ) : (
                       <>
-                        <span>Reset Password</span>
+                        <span>Update Password</span>
                         <ArrowRight className="w-4 h-4 shrink-0" />
                       </>
                     )}
                   </button>
                 </form>
               )}
+
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsForgotPassword(false);
+                    setErrorText(null);
+                    setSuccessText(null);
+                  }}
+                  className="text-[10px] font-mono text-zinc-400 hover:text-emerald-400 uppercase tracking-widest transition-colors cursor-pointer"
+                >
+                  Return to Login
+                </button>
+              </div>
             </div>
           ) : (
-            <div className="space-y-6">
-            <div className="text-left">
-              {onCancel && (
-                <button 
-                  type="button"
-                  onClick={onCancel}
-                  className="inline-flex items-center gap-1.5 text-[9.5px] font-mono text-zinc-520 hover:text-white uppercase transition-colors mb-6 cursor-pointer"
-                >
-                  ← Back to main overview
-                </button>
-              )}
-              <span className="text-[9.5px] font-mono text-[#06b6d4] uppercase tracking-widest font-black block">
-                {isSignUp ? "Account Registration" : "Command Station Access"}
-              </span>
-              <p className="text-xs text-zinc-500 mt-1.5 font-sans font-medium">
-                {isSignUp 
-                  ? "Create your securely encrypted farmer profile." 
-                  : "Verify identity credentials to unlock manual controls."}
-              </p>
-            </div>
-
             <form onSubmit={handleSubmit} className="space-y-4 font-mono text-left">
               {isSignUp && (
                 <div className="space-y-1.5 text-xs">
@@ -676,8 +575,8 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccessLogin, onCancel }
                         setErrorText(null);
                       }}
                       disabled={isScanning}
-                      placeholder="Jane Doe"
-                      className="w-full bg-neutral-950 border border-zinc-900 focus:border-emerald-500/40 rounded-xl py-3 pl-10 pr-4 text-xs text-zinc-200 focus:outline-none placeholder-zinc-805"
+                      placeholder="Enter your full name"
+                      className="w-full bg-neutral-950 border border-zinc-900 focus:border-emerald-500/40 rounded-xl py-3 pl-10 pr-4 text-xs text-zinc-200 focus:outline-none placeholder-zinc-800"
                     />
                     <User className="w-4 h-4 text-zinc-700 absolute left-3.5 top-3.5" />
                   </div>
@@ -685,7 +584,7 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccessLogin, onCancel }
               )}
 
               <div className="space-y-1.5 text-xs">
-                <label className="text-zinc-500 uppercase tracking-widest font-bold">Email Address</label>
+                <label className="text-zinc-500 uppercase tracking-widest font-bold">Network Email</label>
                 <div className="relative">
                   <input
                     type="email"
@@ -695,23 +594,27 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccessLogin, onCancel }
                       setErrorText(null);
                     }}
                     disabled={isScanning}
-                    placeholder="farmer@example.com"
-                    className="w-full bg-neutral-950 border border-zinc-900 focus:border-emerald-500/40 rounded-xl py-3 pl-10 pr-4 text-xs text-zinc-200 focus:outline-none placeholder-zinc-805"
+                    placeholder="agent@agrosensix.com"
+                    className="w-full bg-neutral-950 border border-zinc-900 focus:border-emerald-500/40 rounded-xl py-3 pl-10 pr-4 text-xs text-zinc-200 focus:outline-none placeholder-zinc-800"
                   />
                   <Mail className="w-4 h-4 text-zinc-700 absolute left-3.5 top-3.5" />
                 </div>
               </div>
-
+              
               <div className="space-y-1.5 text-xs">
                 <div className="flex justify-between items-center">
-                  <label className="text-zinc-500 uppercase tracking-widest font-bold">Security Passphrase</label>
+                  <label className="text-zinc-500 uppercase tracking-widest font-bold">Passphrase</label>
                   {!isSignUp && (
-                    <button 
-                      type="button" 
-                      onClick={() => setIsForgotPassword(true)}
-                      className="text-[9px] text-zinc-500 hover:text-emerald-400 uppercase font-semibold cursor-pointer transition-colors"
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsForgotPassword(true);
+                        setErrorText(null);
+                        setSuccessText(null);
+                      }}
+                      className="text-[10px] text-emerald-500 hover:text-emerald-400 font-sans tracking-wide transition-colors cursor-pointer"
                     >
-                      Forgot?
+                      Forgot password?
                     </button>
                   )}
                 </div>
@@ -724,14 +627,14 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccessLogin, onCancel }
                       setErrorText(null);
                     }}
                     disabled={isScanning}
-                    placeholder="Enter security access key"
-                    className="w-full bg-neutral-950 border border-zinc-900 focus:border-emerald-500/40 rounded-xl py-3 pl-10 pr-10 text-xs text-zinc-200 focus:outline-none placeholder-zinc-805"
+                    placeholder="••••••••••••"
+                    className="w-full bg-neutral-950 border border-zinc-900 focus:border-emerald-500/40 rounded-xl py-3 pl-10 pr-10 text-xs text-zinc-200 focus:outline-none placeholder-zinc-800 tracking-widest"
                   />
-                  <Key className="w-4 h-4 text-zinc-700 absolute left-3.5 top-3.5" />
-                  <button 
-                    type="button" 
+                  <Lock className="w-4 h-4 text-zinc-700 absolute left-3.5 top-3.5" />
+                  <button
+                    type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3.5 top-3.5 text-zinc-600 hover:text-zinc-400 cursor-pointer"
+                    className="absolute right-3.5 top-3.5 text-zinc-600 hover:text-zinc-400 transition-colors cursor-pointer"
                   >
                     {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
@@ -739,29 +642,25 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccessLogin, onCancel }
               </div>
 
               {isSignUp && (
-                <>
-                  <PasswordStrength password={password} />
-                  <div className="space-y-1.5 text-xs">
-                    <label className="text-zinc-500 uppercase tracking-widest font-bold">Confirm Passphrase</label>
-                    <div className="relative">
-                      <input
-                        type={showPassword ? "text" : "password"}
-                        value={confirmPassword}
-                        onChange={(e) => {
-                          setConfirmPassword(e.target.value);
-                          setErrorText(null);
-                        }}
-                        disabled={isScanning}
-                        placeholder="Confirm security access key"
-                        className="w-full bg-neutral-950 border border-zinc-900 focus:border-emerald-500/40 rounded-xl py-3 pl-10 pr-10 text-xs text-zinc-200 focus:outline-none placeholder-zinc-805"
-                      />
-                      <Key className="w-4 h-4 text-zinc-700 absolute left-3.5 top-3.5" />
-                    </div>
+                <div className="space-y-1.5 text-xs">
+                  <label className="text-zinc-500 uppercase tracking-widest font-bold">Confirm Passphrase</label>
+                  <div className="relative">
+                    <input
+                      type={showPassword ? "text" : "password"}
+                      value={confirmPassword}
+                      onChange={(e) => {
+                        setConfirmPassword(e.target.value);
+                        setErrorText(null);
+                      }}
+                      disabled={isScanning}
+                      placeholder="••••••••••••"
+                      className="w-full bg-neutral-950 border border-zinc-900 focus:border-emerald-500/40 rounded-xl py-3 pl-10 pr-4 text-xs text-zinc-200 focus:outline-none placeholder-zinc-800 tracking-widest"
+                    />
+                    <Lock className="w-4 h-4 text-zinc-700 absolute left-3.5 top-3.5" />
                   </div>
-                </>
+                </div>
               )}
 
-              {/* Status messages blocks */}
               {errorText && (
                 <div className="p-3 bg-rose-950/20 border border-rose-900/30 rounded-xl text-center">
                   <p className="text-rose-400 text-xs font-bold uppercase tracking-wide leading-normal">
@@ -780,66 +679,59 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccessLogin, onCancel }
 
               <button
                 type="submit"
-                disabled={isScanning}
+                disabled={isScanning || getRemainingLockoutTime() > 0}
                 className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-cyan-500 hover:from-emerald-450 hover:to-cyan-450 text-[#000] disabled:opacity-40 font-sans font-bold uppercase rounded-xl flex items-center justify-center gap-1.5 transition-all duration-300 cursor-pointer shadow-lg tracking-wider text-xs active:scale-[0.98] mt-2"
               >
                 {isScanning ? (
                   <>
                     <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#000]" />
-                    <span>Verifying Identity...</span>
+                    <span>Verifying...</span>
                   </>
                 ) : (
                   <>
-                    <span>{isSignUp ? "Register Account" : "Execute Access Login"}</span>
+                    <span>{isSignUp ? "Register" : "Authorize"}</span>
                     <ArrowRight className="w-4 h-4 shrink-0" />
                   </>
                 )}
               </button>
-            </form>
+              
+              <div className="py-2 flex items-center justify-center space-x-4">
+                <div className="h-px bg-zinc-800 flex-1"></div>
+                <span className="text-zinc-600 font-mono text-[10px] uppercase tracking-widest font-bold">Or</span>
+                <div className="h-px bg-zinc-800 flex-1"></div>
+              </div>
 
-            <div className="relative my-4 flex items-center justify-center">
-              <div className="border-t border-zinc-900 w-full" />
-              <span className="bg-neutral-950 px-3 text-[10px] font-mono text-zinc-500 uppercase tracking-widest absolute">OR</span>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleGoogleAuth}
-              disabled={isScanning}
-              className="w-full py-3 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 text-white font-sans font-semibold rounded-xl flex items-center justify-center gap-2.5 transition-all duration-300 cursor-pointer text-xs active:scale-[0.98]"
-            >
-              <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
-                <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96H1.29v3.15C3.26 21.3 7.31 24 12 24z"/>
-                <path fill="#FBBC05" d="M5.28 14.24c-.25-.72-.38-1.49-.38-2.24s.13-1.52.38-2.24V6.61H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.39l3.99-3.15z"/>
-                <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.61l3.99 3.15c.95-2.85 3.6-4.96 6.72-4.96z"/>
-              </svg>
-              <span>{isSignUp ? "Sign up with Google" : "Sign in with Google"}</span>
-            </button>
-            
-            <div className="text-center pt-2">
               <button
                 type="button"
-                onClick={() => {
-                  setIsSignUp(!isSignUp);
-                  setErrorText(null);
-                  setSuccessText(null);
-                }}
-                className="text-[10px] font-mono text-zinc-400 hover:text-emerald-400 uppercase tracking-widest transition-colors cursor-pointer"
+                onClick={handleGoogleAuth}
+                disabled={isScanning}
+                className="w-full py-3 bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 hover:border-zinc-700 text-white font-sans font-semibold rounded-xl flex items-center justify-center gap-2.5 transition-all duration-300 cursor-pointer text-xs active:scale-[0.98]"
               >
-                {isSignUp ? "Already have an account? Sign In" : "Need an account? Sign Up"}
+                <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.665-5.17 3.665-9.17z"/>
+                  <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.11-6.72-4.96H1.29v3.15C3.26 21.3 7.31 24 12 24z"/>
+                  <path fill="#FBBC05" d="M5.28 14.24c-.25-.72-.38-1.49-.38-2.24s.13-1.52.38-2.24V6.61H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.39l3.99-3.15z"/>
+                  <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.61l3.99 3.15c.95-2.85 3.6-4.96 6.72-4.96z"/>
+                </svg>
+                <span>{isSignUp ? "Sign up with Google" : "Sign in with Google"}</span>
               </button>
-            </div>
-          </div>
+              
+              <div className="text-center pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSignUp(!isSignUp);
+                    setErrorText(null);
+                    setSuccessText(null);
+                  }}
+                  className="text-[10px] font-mono text-zinc-400 hover:text-emerald-400 uppercase tracking-widest transition-colors cursor-pointer"
+                >
+                  {isSignUp ? "Already have an account? Sign In" : "Need an account? Sign Up"}
+                </button>
+              </div>
+            </form>
           )}
-
-          <div className="flex items-start gap-2.5 border-t border-zinc-900/80 pt-5 text-[9px] font-mono text-zinc-550 uppercase tracking-tight font-semibold leading-relaxed">
-            <ShieldCheck className="w-4 h-4 text-emerald-450 shrink-0 mt-0.5" />
-            <span>Encrypted transmission. Passwords are hashed via bcrypt. Sessions are authorized in strict alignment with agricultural security guidelines.</span>
-          </div>
-
         </div>
-
       </div>
     </div>
   );

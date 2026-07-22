@@ -25,6 +25,8 @@ import { OfflineManager } from "./components/OfflineManager";
 import { ImpactView } from "./components/ImpactView";
 import { SettingsView } from "./components/SettingsView";
 import { GmailView } from "./components/GmailView";
+import { VoiceAssistantModal } from "./components/VoiceAssistantModal";
+import { ApiKeyModal } from "./components/ApiKeyModal";
 import { checkAndTriggerEmailAlerts } from "./utils/alertEngine";
 import { offlineStorage } from "./utils/offlineStorage";
 
@@ -59,7 +61,10 @@ import {
   Cpu,
   BookOpen,
   Info,
-  AlertOctagon
+  AlertOctagon,
+  Mic,
+  Key,
+  Sparkles
 } from "lucide-react";
 
 const getPageFromPath = (path: string): NavigationPage => {
@@ -141,6 +146,20 @@ export default function App() {
   const [isSidebarExpanded, setIsSidebarExpanded] = useState<boolean>(() => {
     return localStorage.getItem("settings_sidebar_expanded") !== "false";
   });
+
+  // Voice Assistant & ChatGPT / OpenAI Custom API Key states
+  const [voiceModalOpen, setVoiceModalOpen] = useState(false);
+  const [apiKeyModalOpen, setApiKeyModalOpen] = useState(false);
+  const [customApiKey, setCustomApiKey] = useState<string>(() => {
+    return typeof window !== "undefined" ? localStorage.getItem("agrosensix_custom_api_key") || "" : "";
+  });
+
+  const handleSaveApiKey = (key: string) => {
+    setCustomApiKey(key);
+    if (typeof window !== "undefined") {
+      localStorage.setItem("agrosensix_custom_api_key", key);
+    }
+  };
 
   useEffect(() => {
     localStorage.setItem("settings_sidebar_expanded", isSidebarExpanded ? "true" : "false");
@@ -331,43 +350,27 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // Custom JWT Session Auto-restoration
+  // Firebase Auth Session Auto-restoration
   useEffect(() => {
-    const token = localStorage.getItem("agrosensix_auth_token");
-    if (token) {
-      // Verify token with backend
-      fetch("/api/auth/me", {
-        headers: {
-          "Authorization": `Bearer ${token}`
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setIsBypassMode(false);
+        setLoggedInUser(user.displayName || user.email || "Farmer");
+        localStorage.setItem("agrosensix_cached_user", user.displayName || user.email || "Farmer");
+        
+        if (!forceOffline && navigator.onLine) {
+          await seedDatabaseIfEmpty();
         }
-      })
-      .then(res => res.json())
-      .then(async data => {
-        if (data.success && data.user) {
-          setIsBypassMode(false);
-          setLoggedInUser(data.user.fullName || data.user.email);
-          localStorage.setItem("agrosensix_cached_user", data.user.fullName || data.user.email);
-          
-          if (!forceOffline && navigator.onLine) {
-            await seedDatabaseIfEmpty();
-          }
-        } else {
-          // Token expired or invalid
+      } else {
+        if (!isLocalOnly) {
+          setLoggedInUser(null);
+          localStorage.removeItem("agrosensix_cached_user");
           localStorage.removeItem("agrosensix_auth_token");
-          if (!isLocalOnly) {
-            setLoggedInUser(null);
-            localStorage.removeItem("agrosensix_cached_user");
-          }
         }
-      })
-      .catch(err => {
-        console.error("Token verification failed:", err);
-      });
-    } else {
-      if (!isLocalOnly) {
-        setLoggedInUser(null);
       }
-    }
+    });
+
+    return () => unsubscribe();
   }, [isLocalOnly, forceOffline]);
 
   // Set up live Firestore realtime snapshot listeners to synchronize client views seamlessly
@@ -506,6 +509,7 @@ export default function App() {
 
   // Automated pumping countdown timer if manual pulsing active
   useEffect(() => {
+    if (!loggedInUser) return;
     if (pump.pulsingTimerSec > 0) {
       const timer = setTimeout(() => {
         const nextSec = pump.pulsingTimerSec - 1;
@@ -518,6 +522,10 @@ export default function App() {
             currentMode: "biological" as const,
             pulsingTimerSec: 0
           };
+          setPump((prev) => ({
+            ...prev,
+            ...finishedUpdates
+          }));
           if (!isLocalOnly) {
             try {
               // Finished pulse sequence, return pump to baseline idle standby state globally on DB
@@ -525,11 +533,6 @@ export default function App() {
             } catch (err) {
               console.warn("Firestore update failed:", err);
             }
-          } else {
-            setPump((prev) => ({
-              ...prev,
-              ...finishedUpdates
-            }));
           }
         } else {
           const tickUpdates = {
@@ -537,17 +540,16 @@ export default function App() {
             totalLitresDispensed: parseFloat((pump.totalLitresDispensed + (pump.flowRateLpm / 60)).toFixed(1))
           };
           // Keep ticking down in local React/Firestore state
+          setPump((prev) => ({
+            ...prev,
+            ...tickUpdates
+          }));
           if (!isLocalOnly) {
             try {
               updateFirestorePump(tickUpdates);
             } catch (err) {
               console.warn("Firestore update failed:", err);
             }
-          } else {
-            setPump((prev) => ({
-              ...prev,
-              ...tickUpdates
-            }));
           }
 
           // Hydrate the relative sectors locally/globally
@@ -675,17 +677,16 @@ export default function App() {
       pressureBar: mode === "eco" ? 1.5 : mode === "intensive" ? 4.5 : mode === "biological" ? 3.2 : 0
     };
 
+    setPump((prev) => ({
+      ...prev,
+      ...pumpUpdates
+    }));
     if (!isLocalOnly) {
       try {
         await updateFirestorePump(pumpUpdates);
       } catch (err) {
         console.warn("Firestore update failed:", err);
       }
-    } else {
-      setPump((prev) => ({
-        ...prev,
-        ...pumpUpdates
-      }));
     }
   };
 
@@ -701,19 +702,16 @@ export default function App() {
       actionType: level > prevPercent ? "refill" : "depletion"
     });
 
+    setPump((prev) => ({
+      ...prev,
+      reservoirLevelPercent: level
+    }));
     if (!isLocalOnly) {
       try {
-        await updateFirestorePump({
-          reservoirLevelPercent: level
-        });
+        await updateFirestorePump({ reservoirLevelPercent: level });
       } catch (err) {
         console.warn("Firestore update failed:", err);
       }
-    } else {
-      setPump((prev) => ({
-        ...prev,
-        reservoirLevelPercent: level
-      }));
     }
   };
 
@@ -1058,7 +1056,32 @@ export default function App() {
             </div>
 
             {/* Header Actions Panel (No light togglers, strictly system session status & networks) */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2.5">
+              
+              {/* Voice Assistant Header Trigger */}
+              <button
+                onClick={() => setVoiceModalOpen(true)}
+                className="px-3 py-2.5 bg-gradient-to-r from-emerald-500/15 to-teal-500/15 hover:from-emerald-500/25 hover:to-teal-500/25 border border-emerald-500/40 text-emerald-300 font-mono text-[9.5px] uppercase tracking-wider transition-all duration-300 flex items-center gap-1.5 cursor-pointer shadow-sm rounded-xl font-bold active:scale-95 group"
+                title="Voice Assistant: Trigger irrigation sequences or ask system/general status using speech"
+              >
+                <Mic className="w-3.5 h-3.5 shrink-0 text-emerald-400 group-hover:scale-110 transition-transform" />
+                <span className="hidden sm:inline">Voice Assistant</span>
+              </button>
+
+              {/* Custom ChatGPT / OpenAI / Gemini API Key Config */}
+              <button
+                onClick={() => setApiKeyModalOpen(true)}
+                className={`px-2.5 py-2.5 rounded-xl border font-mono text-[9.5px] uppercase tracking-wider transition-all duration-300 flex items-center gap-1.5 cursor-pointer shadow-sm ${
+                  customApiKey 
+                    ? "bg-cyan-950/40 border-cyan-500/40 text-cyan-300 hover:bg-cyan-950/60" 
+                    : "bg-zinc-950/80 hover:bg-zinc-900 border-zinc-900/60 text-zinc-400 hover:text-cyan-400"
+                }`}
+                title="ChatGPT / OpenAI / Gemini Custom API Key Configuration"
+              >
+                <Key className="w-3.5 h-3.5 shrink-0 text-cyan-400" />
+                <span className="hidden md:inline">{customApiKey ? "AI KEY SET" : "AI KEY"}</span>
+              </button>
+
               {loggedInUser && (
                 <button
                   onClick={() => handleUpdatePumpMode("off")}
@@ -1230,6 +1253,30 @@ export default function App() {
         </footer>
 
       </div>
+
+      {/* 4. SYSTEM MODALS */}
+      <VoiceAssistantModal
+        isOpen={voiceModalOpen}
+        onClose={() => setVoiceModalOpen(false)}
+        sectors={sectors}
+        battery={battery}
+        pump={pump}
+        onTriggerIrrigation={handleTriggerIrrigation}
+        onUpdatePumpMode={handleUpdatePumpMode}
+        apiKey={customApiKey}
+        onOpenApiKeyModal={() => {
+          setVoiceModalOpen(false);
+          setApiKeyModalOpen(true);
+        }}
+      />
+
+      <ApiKeyModal
+        isOpen={apiKeyModalOpen}
+        onClose={() => setApiKeyModalOpen(false)}
+        apiKey={customApiKey}
+        onSaveApiKey={handleSaveApiKey}
+      />
+
     </div>
   );
 }

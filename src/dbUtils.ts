@@ -5,7 +5,7 @@ import {
   setDoc, 
   updateDoc 
 } from "firebase/firestore";
-import { db, handleFirestoreError, OperationType } from "./firebase";
+import { auth, db, handleFirestoreError, OperationType } from "./firebase";
 import { SectorData, SensorNode, BatteryTelemetry, WaterPumpTelemetry } from "./types";
 import { mockSectors, mockBattery, mockPump } from "./mockData";
 
@@ -14,6 +14,10 @@ import { mockSectors, mockBattery, mockPump } from "./mockData";
  */
 export async function seedDatabaseIfEmpty() {
   try {
+    if (!auth.currentUser) {
+      console.warn("Attempted to call seedDatabaseIfEmpty while not authenticated with Firebase. Aborting to prevent permission errors.");
+      return;
+    }
     const sectorsCol = collection(db, "sectors");
     const snapshot = await getDocs(sectorsCol);
     
@@ -72,6 +76,10 @@ export async function seedDatabaseIfEmpty() {
  */
 export async function updateFirestoreSector(sectorId: string, updates: Partial<SectorData>) {
   try {
+    if (!auth.currentUser) {
+      console.warn("Attempted to call updateFirestoreSector while not authenticated with Firebase. Aborting to prevent permission errors.");
+      return;
+    }
     const ref = doc(db, "sectors", sectorId);
     await updateDoc(ref, updates);
   } catch (error) {
@@ -84,6 +92,10 @@ export async function updateFirestoreSector(sectorId: string, updates: Partial<S
  */
 export async function updateFirestoreNode(sectorId: string, nodeId: string, updates: Partial<SensorNode>) {
   try {
+    if (!auth.currentUser) {
+      console.warn("Attempted to call updateFirestoreNode while not authenticated with Firebase. Aborting to prevent permission errors.");
+      return;
+    }
     const ref = doc(db, "sectors", sectorId, "nodes", nodeId);
     await updateDoc(ref, updates);
   } catch (error) {
@@ -96,6 +108,10 @@ export async function updateFirestoreNode(sectorId: string, nodeId: string, upda
  */
 export async function updateFirestoreBattery(updates: Partial<BatteryTelemetry>) {
   try {
+    if (!auth.currentUser) {
+      console.warn("Attempted to call updateFirestoreBattery while not authenticated with Firebase. Aborting to prevent permission errors.");
+      return;
+    }
     const ref = doc(db, "telemetry", "battery");
     await updateDoc(ref, updates);
   } catch (error) {
@@ -108,6 +124,10 @@ export async function updateFirestoreBattery(updates: Partial<BatteryTelemetry>)
  */
 export async function updateFirestorePump(updates: Partial<WaterPumpTelemetry>) {
   try {
+    if (!auth.currentUser) {
+      console.warn("Attempted to call updateFirestorePump while not authenticated with Firebase. Aborting to prevent permission errors.");
+      return;
+    }
     const ref = doc(db, "telemetry", "pump");
     await updateDoc(ref, updates);
   } catch (error) {

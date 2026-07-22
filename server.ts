@@ -321,7 +321,8 @@ function getSimulatedBotanicalResponse(message: string, isFromOutage: boolean = 
 
 // API routes go here FIRST
 app.post("/api/gemini/chat", async (req, res) => {
-  const { message, history } = req.body;
+  const { message, history, apiKey: bodyKey } = req.body;
+  const customKey = (req.headers["x-custom-api-key"] as string) || bodyKey || process.env.OPENAI_API_KEY;
 
   if (!message) {
     return res.status(400).json({ error: "Message is required" });
@@ -334,6 +335,93 @@ app.post("/api/gemini/chat", async (req, res) => {
 
   // Keep-alive header for some reverse proxies
   res.write("id: " + Date.now() + "\n\n");
+
+  // Check if user provided an OpenAI / ChatGPT key (starts with sk-)
+  if (customKey && customKey.trim().startsWith("sk-")) {
+    try {
+      console.log("Streaming response from OpenAI ChatGPT API using custom user key...");
+      const openAiMessages = [
+        { role: "system", content: BOTANICAL_SYSTEM_PROMPT },
+      ];
+
+      if (history && Array.isArray(history)) {
+        history.slice(-10).forEach((msg: any) => {
+          openAiMessages.push({
+            role: msg.role === "assistant" ? "assistant" : "user",
+            content: msg.content || " ",
+          });
+        });
+      }
+
+      openAiMessages.push({ role: "user", content: message });
+
+      const openAiRes = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${customKey.trim()}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-4o-mini",
+          messages: openAiMessages,
+          stream: true,
+          temperature: 0.7,
+        }),
+      });
+
+      if (!openAiRes.ok) {
+        const errText = await openAiRes.text();
+        console.warn("OpenAI API request failed:", openAiRes.status, errText);
+        throw new Error(`OpenAI API error ${openAiRes.status}`);
+      }
+
+      const reader = openAiRes.body?.getReader();
+      const decoder = new TextDecoder("utf-8");
+
+      if (reader) {
+        let buffer = "";
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || "";
+
+          for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed.startsWith("data: ")) {
+              const dataStr = trimmed.slice(6);
+              if (dataStr === "[DONE]") continue;
+              try {
+                const parsed = JSON.parse(dataStr);
+                const textChunk = parsed.choices?.[0]?.delta?.content || "";
+                if (textChunk) {
+                  res.write(`data: ${JSON.stringify({ text: textChunk })}\n\n`);
+                }
+              } catch (e) {
+                // ignore SSE parse artifacts
+              }
+            }
+          }
+        }
+      }
+
+      res.write("data: [DONE]\n\n");
+      return res.end();
+    } catch (err: any) {
+      console.warn("OpenAI ChatGPT API call failed, falling back to Gemini / simulated:", err.message);
+    }
+  }
+
+  // Check if custom key is a Gemini key
+  let activeAiClient = aiClient;
+  if (customKey && !customKey.trim().startsWith("sk-") && customKey.trim().length > 10) {
+    try {
+      activeAiClient = new GoogleGenAI({ apiKey: customKey.trim() });
+    } catch (e) {
+      console.warn("Failed to create GoogleGenAI client with custom key:", e);
+    }
+  }
 
   // Format context history for general content parameter
   const rawContents: any[] = [];
@@ -363,7 +451,7 @@ app.post("/api/gemini/chat", async (req, res) => {
   }
 
   // If we have an active Gemini API client, stream content from it!
-  if (aiClient) {
+  if (activeAiClient) {
     try {
       console.log("Streaming from Gemini model...");
       
@@ -377,7 +465,7 @@ app.post("/api/gemini/chat", async (req, res) => {
         const selectedModel = "gemini-2.5-flash";
         try {
           console.log(`Sending streaming prompt to Gemini using ${selectedModel} (Attempt ${attempts}/${maxAttempts})...`);
-          responseStream = await aiClient.models.generateContentStream({
+          responseStream = await activeAiClient.models.generateContentStream({
             model: selectedModel,
             contents: contentsList,
             config: {
@@ -499,7 +587,7 @@ app.post("/api/auth/register", async (req, res) => {
 
   } catch (error: any) {
     console.error("Registration error:", error);
-    res.status(500).json({ error: "Failed to register user. Please try again." });
+    res.status(500).json({ error: error.message || "Failed to register user. Please try again." });
   }
 });
 

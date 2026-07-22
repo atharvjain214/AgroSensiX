@@ -1148,9 +1148,13 @@ All other telemetry sectors (including solar grids, pumps, and temperature senso
     setMessages((prev) => [...prev, assistantPlaceholder]);
 
     try {
+      const customApiKey = typeof window !== "undefined" ? localStorage.getItem("agrosensix_custom_api_key") || "" : "";
       const response = await fetch("/api/gemini/chat", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "x-custom-api-key": customApiKey,
+        },
         body: JSON.stringify({ 
           message: textToSend, 
           history: conversationHistoryForApi 

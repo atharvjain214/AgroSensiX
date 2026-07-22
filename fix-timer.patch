@@ -1,0 +1,10 @@
+--- src/App.tsx
++++ src/App.tsx
+@@ -510,6 +510,7 @@
+ 
+   // Automated pumping countdown timer if manual pulsing active
+   useEffect(() => {
++    if (!loggedInUser) return;
+     if (pump.pulsingTimerSec > 0) {
+       const timer = setTimeout(() => {
+         const nextSec = pump.pulsingTimerSec - 1;
