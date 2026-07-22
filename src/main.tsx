@@ -73,38 +73,75 @@ if (typeof window !== "undefined" && "serviceWorker" in navigator) {
     window.addEventListener("load", () => {
       navigator.serviceWorker.register("/sw.js")
         .then((reg) => {
-          console.log("Service Worker registered successfully with scope:", reg.scope);
+          console.log("[PWA] Service Worker registered successfully with scope:", reg.scope);
 
-          // Active Shell Backfilling: send currently loaded DOM resources to the service worker for dynamic caching
+          // Listen for new service worker updates on deployment
+          reg.addEventListener("updatefound", () => {
+            const installingWorker = reg.installing;
+            if (installingWorker) {
+              installingWorker.addEventListener("statechange", () => {
+                if (installingWorker.state === "installed" && navigator.serviceWorker.controller) {
+                  console.log("[PWA] New deployment detected. Activating latest Service Worker.");
+                  installingWorker.postMessage({ type: "SKIP_WAITING" });
+                }
+              });
+            }
+          });
+
+          // Active Shell Backfilling: send currently loaded DOM resources & routes to the service worker for full dynamic caching
           const sendShellAssets = () => {
-            const controller = navigator.serviceWorker.controller;
-            if (controller) {
-              const assetsToCache = [
-                window.location.origin + "/",
-                window.location.origin + "/index.html",
-                window.location.origin + "/manifest.json",
-                ...Array.from(document.querySelectorAll("script")).map((s) => s.src).filter(Boolean),
-                ...Array.from(document.querySelectorAll("link")).map((l) => l.href).filter(Boolean),
-                ...Array.from(document.querySelectorAll("img")).map((i) => i.src).filter(Boolean),
-                "https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300..905;1,300..905&family=Space+Grotesk:wght@300..700&family=JetBrains+Mono:ital,wght@0,105..805;1,105..805&display=swap"
-              ];
-              controller.postMessage({
+            const targetWorker = navigator.serviceWorker.controller || reg.active || reg.installing;
+            if (targetWorker) {
+              const appRoutes = [
+                "/",
+                "/index.html",
+                "/manifest.json",
+                "/dashboard",
+                "/analytics",
+                "/ai-assistant",
+                "/irrigation",
+                "/impact",
+                "/offline",
+                "/architecture",
+                "/about",
+                "/settings",
+                "/login",
+                "/gmail"
+              ].map((r) => new URL(r, window.location.origin).href);
+
+              const assetsToCache = Array.from(
+                new Set([
+                  ...appRoutes,
+                  ...Array.from(document.querySelectorAll("script")).map((s) => s.src).filter(Boolean),
+                  ...Array.from(document.querySelectorAll("link")).map((l) => l.href).filter(Boolean),
+                  ...Array.from(document.querySelectorAll("img")).map((i) => i.src).filter(Boolean),
+                  "https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300..905;1,300..905&family=Space+Grotesk:wght@300..700&family=JetBrains+Mono:ital,wght@0,105..805;1,105..805&display=swap"
+                ])
+              );
+
+              targetWorker.postMessage({
                 type: "CACHE_ASSETS",
                 assets: assetsToCache
               });
-              console.log("[PWA Backfill] Active app shell asset list sent to Service Worker.");
+              console.log(`[PWA Backfill] Sent ${assetsToCache.length} shell assets & routes to Service Worker for offline caching.`);
             }
           };
 
-          // If the service worker is already controlling the page, send assets right away;
-          // otherwise, wait for any new controller to activate and take charge.
-          if (navigator.serviceWorker.controller) {
-            sendShellAssets();
+          // Trigger asset caching immediately upon registration, after controller change, and after DOM stabilization
+          sendShellAssets();
+          setTimeout(sendShellAssets, 1200);
+
+          if ("ready" in navigator.serviceWorker) {
+            navigator.serviceWorker.ready.then(() => {
+              sendShellAssets();
+              setTimeout(sendShellAssets, 2000);
+            });
           }
+
           navigator.serviceWorker.addEventListener("controllerchange", sendShellAssets);
         })
         .catch((err) => {
-          console.warn("Service Worker registration failed:", err);
+          console.warn("[PWA] Service Worker registration failed:", err);
         });
     });
   }

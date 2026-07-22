@@ -168,55 +168,32 @@ How can I assist you on the farm today? Ask me about moisture or water!`,
 - **ஆஃப்லைன் சிங்க்**: இணையம் வந்தவுடன் உங்கள் தரவுகள் தானாகவே புதுப்பிக்கப்படும்.`
   },
   Bengali: {
-    watering: `### 💧 स्मार्ट सेच व জ�const getLocalizedOfflineResponse = (prompt: string, langName: string, isOnline: boolean = false): string => {
-  const p = prompt.toLowerCase().trim();
-  const lang = LOCALIZED_OFFLINE_DB[langName] ? langName : "English";
-  const db = LOCALIZED_OFFLINE_DB[lang];
-
-  let topic = "hello";
-  if (p.includes("water") || p.includes("irrigate") || p.includes("pump") || p.includes("watering") || p.includes("පාਣੀ") || p.includes("पानी") || p.includes("ਪਾਣੀ") || p.includes("நீர்") || p.includes("जल") || p.includes("సేచ")) {
-    topic = "watering";
-  } else if (p.includes("soil") || p.includes("moisture") || p.includes("sensor") || p.includes("humidity") || p.includes("નમી") || p.includes("נਮੀ") || p.includes("നമി") || p.includes("नमी")) {
-    topic = "moisture";
-  } else if (p.includes("disease") || p.includes("pest") || p.includes("health") || p.includes("spots") || p.includes("mildew") || p.includes("বিমারি") || p.includes("நோய்") || p.includes("बीमारी")) {
-    topic = "disease";
-  } else if (p.includes("battery") || p.includes("solar") || p.includes("power") || p.includes("charge")) {
-    topic = "solar";
-  } else if (p.includes("harvest") || p.includes("yield") || p.includes("orange") || p.includes("crop") || p.includes("തോട്ടം") || p.includes("तोड")) {
-    topic = "harvest";
-  } else if (p.includes("trouble") || p.includes("fail") || p.includes("calibrate") || p.includes("fix") || p.includes("센서") || p.includes("சுத்தம்")) {
-    topic = "trouble";
-  } else if (p.includes("faq") || p.includes("question") || p.includes("offline")) {
-    topic = "faq";
-  }
-
-  // Retrieve matching topic content, fallback to default 'hello' or moisture if needed
-  let content = db[topic];
-  if (!content) {
-    content = db["hello"] || LOCALIZED_OFFLINE_DB["English"][topic] || LOCALIZED_OFFLINE_DB["English"]["hello"];
-  }
-
-  // Append a helpful offline translation assurance notice matching the response language exactly
-  const offlineNoticeMap: Record<string, string> = {
-    English: "\n\n*(Offline Mode: Disconnected from cloud server. Displaying local smart-grid diagnostics matching your request.)*",
-    Hindi: "\n\n*(ऑफ़लाइन मोड: क्लाउड सर्वर से संपर्क टूटा हुआ है। आपकी मांग के अनुसार स्थानीय डेटाबेस से जानकारी दिखाई जा रही है।)*",
-    Punjabi: "\n\n*(ਔਫਲਾਈਨ ਮੋਡ: ਕਲਾਊਡ ਸਰਵਰ ਤੋਂ ਸੰਪਰਕ ਟੁੱਟਾ ਹੈ। ਤੁਹਾਡੀ ਮੰਗ ਅਨੁਸਾਰ ਸਥਾਨਕ ਡਾਟਾਬੇਸ ਤੋਂ ਜਾਣਕਾਰੀ ਦਿਖਾਈ ਜਾ ਰਹੀ ਹੈ।)*",
-    Tamil: "\n\n*(ஆஃப்லைன் பயன்முறை: கிளவுட் சேவையக தொடர்பு துண்டிக்கப்பட்டுள்ளது. உங்கள் கோரிக்கைக்கு ஏற்ப உள்நாட்டு தரவுத்தளம் காட்டப்படுகிறது.)*",
-    Telugu: "\n\n*(ఆఫ్‌లైన్ మోడ్: క్లౌడ్ సర్వర్‌తో సంబంధం కోల్పోయాము. మీ అభ్యర్థనకు సరిపోయే స్థానిక డేటాబేస్ సమాచారాన్ని చూపిస్తున్నాము.)*",
-    Bengali: "\n\n*(অফলাইন মোড: ক্লাউড সার্ভারের সাথে সংযোগ বিচ্ছিন্ন। আপনার অনুরোধ অনুসারে স্থানীয় ডাটাবেস থেকে তথ্য দেখানো হচ্ছে।)*",
-    Marathi: "\n\n*(ऑफलाईन मोड: क्लाउड सर्व्हरशी संपर्क तुटला आहे. आपल्या विनंतीनुसार स्थानिक डेटाबेस मधून माहिती दिली जात आहे।)*",
-    Gujarati: "\n\n*(ઑફલાઇન મોડ: ક્લાઉડ સર્વર સાથે કનેક્શન તૂટી ગયું છે. તમારી વિનંતી મુજબ સ્થાનિક ડેટાબેઝમાંથી માહિતી દર્શાવાઈ રહી છે।)*",
-    Kannada: "\n\n*(ಆಫ್‌ಲೈನ್ ಮೋಡ್: ಕ್ಲೌಡ್ ಸರ್ವರ್ ಸಂಪರ್ಕ ಕಡಿತಗೊಂಡಿದೆ. ನಿಮ್ಮ ವಿನಂತಿಗೆ ಸರಿಹೊಂದುವ ಸ್ಥಳೀಯ ಡೇಟಾಬೇಸ್‌ನಿಂದ ಮಾಹಿತಿ ತೋರಿಸಲಾಗುತ್ತಿದೆ.)*",
-    Malayalam: "\n\n*(ഓഫ്‌ലൈൻ മോഡ്: ക്ലൗഡ് ഫയലുകളുമായുള്ള ബന്ധം വിച്ഛേദിക്കപ്പെട്ടു. നിങ്ങളുടെ ആവശ്യപ്രകാരമുള്ള പ്രാദേശിക ഡാറ്റാബേസിൽ നിന്നുള്ള വിവരങ്ങളാണ് കാണിക്കുന്നത്.)*",
-    Urdu: "\n\n*(آف لائن وضع: کلاؤڈ سرور سے رابطہ منقطع ہے۔ آپ کی درخواست کے مطابق مقامی ڈیٹا بیس سے معلومات دکھائی جا رہی ہیں۔)*",
-    Odia: "\n\n*(ଅଫଲାଇନ୍ ମୋଡ୍: କ୍ଲାଉଡ୍ ସର୍ଭର ସହ ସଂଯୋଗ ବିଚ୍ଛିନ୍ନ ହୋଇଛି। ଆପଣଙ୍କ ଅନୁରୋଧ ଅନੁଯାୟୀ ସ୍ଥାନୀୟ ଡାଟାବେସରୁ ସୂଚନା ଦେଖାଯାଉଛି।)*",
-    Assamese: "\n\n*(অফলাইন মোড: ক্লাউড চাৰ্ভাৰৰ সৈতে সংযোগ বিচ্ছিন্ন। আপোনাৰ অনুৰোধ অনুসৰি স্থানীয় ডাটাবেচৰ পৰা তথ্য দেখুওৱা হৈছে।)*"
-  };
-
-  const localNotice = offlineNoticeMap[langName] || offlineNoticeMap["English"];
-
-  return isOnline ? content : content + localNotice;
-};**: ইন্টারনেট চালু হলে সংগৃহীত ডেটা স্বয়ংক্রিয়ভাবে সিঙ্ক হবে।`
+    watering: `### 💧 スマート সেচ ও জল নিকাশি [অফলাইন পরামর্শ]
+গ্রিনহাউস ১৪-এ মাটির আর্দ্রতা বর্তমানে **৫২%**, যা স্বাভাবিক সীমার মধ্যে রয়েছে।
+- **সেচ দেওয়ার সময়**: সৌর শক্তি ব্যবহারের জন্য আজকে দুপুর **১৬:৩০ মিনিটে** জল দেওয়ার উপযুক্ত সময়।`,
+    moisture: `### 📊 মাটির আর্দ্রতার অবস্থা [অফলাইন প্রতিবেদন]
+- গ্রিনহাউস ১৪: মাটির আর্দ্রতা **৫২.৪%** এ স্থিতিশীল রয়েছে।
+- কমলা বাগান: মাটির আর্দ্রতা **৪১%**। এখন জল দেওয়ার প্রয়োজন নেই।`,
+    disease: `### 🛡️ রোগ প্রতিরোধ ও ফসল রক্ষা [অফলাইন নির্দেশিকা]
+আর্দ্রতা বৃদ্ধির কারণে পাতায় দাগ এবং ছত্রাকের হালকা ঝুঁকি রয়েছে।
+- **পরামর্শ ১**: ভালো বাতাস চলাচলের জন্য নিচের দিকের পাতা কেটে পরিষ্কার করুন।
+- **পরামর্শ ২**: পোকা তাড়াতে বিকেলে প্রাকৃতিক নিম জল স্প্রে করুন।`,
+    solar: `### ☀️ সৌর সঞ্চয় ও ব্যাটারি [অফলাইন অবস্থা]
+আজকে সৌরশক্তি সংগ্রহ অত্যন্ত সক্রিয় এবং **৪.৮ kW** উৎপাদিত হয়েছে।
+- **ব্যাটারি**: **৮২%** চার্জযুক্ত এবং সম্পূর্ণ সচল।`,
+    harvest: `### 🍊 ফলন ও ফসল কাটার নির্দেশিকা [অফলাইন পরামর্শ]
+কমলালেবুগুলি সুন্দরভাবে পরিপক্ক হচ্ছে এবং **১৪ থেকে ১৮ দিনের** মধ্যে তোলার জন্য প্রস্তুত হবে।
+- **টিপ**: ফসল তোলার ৫ দিন আগে জল দেওয়া কিছুটা কমিয়ে দিন।`,
+    trouble: `### 🛠️ সেন্সর রক্ষণাবেক্ষণ ও ক্যালিব্রেশন [অফলাইন ম্যানুয়াল]
+যদি লাইভ টেলিমেট্রি আটকে যায়:
+১. ডিভাইস বন্ধ করুন, মেটাল পিনগুলি পরিষ্কার করুন এবং মাটিতে ভালভাবে বসিয়ে দিন।
+২. আপনার ওয়াইফাই সংযোগ (192.168.4.1) চেক করুন।`,
+    hello: `### হ্যালো, আমি আপনার এআই কৃষি সহকারী! 🌿 [অফলাইন সহচর]
+আমি মাটির আর্দ্রতা, সেচের সময় এবং সৌরবিদ্যুতের অবস্থা নিরীক্ষণ করতে পারি।
+আজকে আপনার খামারে কীভাবে সাহায্য করতে পারি? আর্দ্রতা বা সেচ নিয়ে জিজ্ঞেস করুন!`,
+    faq: `### ❓ সাধারণ প্রশ্নোত্তর [অফলাইন মোড]
+- **অনুকূল আর্দ্রতা**: গ্রিনহাউসের ফসলের জন্য **৪৫% থেকে ৭০%** মাটির আর্দ্রতা সবচেয়ে ভালো।
+- **অফলাইন সিঙ্ক**: ইন্টারনেট পুনরায় চালু হলে সমস্ত তথ্য স্বয়ংক্রিয়ভাবে সিঙ্ক হবে!`
   },
   Telugu: {
     hello: `### నమస్కారం! నేను మీ స్మార్ట్ వ్యవసాయ సహాయకుడిని 🌿 [ఆఫ్‌లైన్]

@@ -62,6 +62,70 @@ import {
   AlertOctagon
 } from "lucide-react";
 
+const getPageFromPath = (path: string): NavigationPage => {
+  const cleanPath = path.toLowerCase().replace(/\/$/, "") || "/";
+  switch (cleanPath) {
+    case "/dashboard":
+      return NavigationPage.DASHBOARD;
+    case "/analytics":
+      return NavigationPage.ANALYTICS;
+    case "/ai-assistant":
+    case "/ai":
+      return NavigationPage.AI_ASSISTANT;
+    case "/irrigation":
+    case "/irrigation-control":
+      return NavigationPage.IRRIGATION_CONTROL;
+    case "/impact":
+      return NavigationPage.IMPACT;
+    case "/offline":
+    case "/offline-hub":
+      return NavigationPage.OFFLINE_HUB;
+    case "/architecture":
+    case "/blueprint":
+      return NavigationPage.ARCHITECTURE;
+    case "/about":
+      return NavigationPage.ABOUT;
+    case "/settings":
+      return NavigationPage.SETTINGS;
+    case "/login":
+      return NavigationPage.LOGIN;
+    case "/gmail":
+      return NavigationPage.GMAIL;
+    default:
+      return NavigationPage.HOME;
+  }
+};
+
+const getPathFromPage = (page: NavigationPage): string => {
+  switch (page) {
+    case NavigationPage.DASHBOARD:
+      return "/dashboard";
+    case NavigationPage.ANALYTICS:
+      return "/analytics";
+    case NavigationPage.AI_ASSISTANT:
+      return "/ai-assistant";
+    case NavigationPage.IRRIGATION_CONTROL:
+      return "/irrigation";
+    case NavigationPage.IMPACT:
+      return "/impact";
+    case NavigationPage.OFFLINE_HUB:
+      return "/offline";
+    case NavigationPage.ARCHITECTURE:
+      return "/architecture";
+    case NavigationPage.ABOUT:
+      return "/about";
+    case NavigationPage.SETTINGS:
+      return "/settings";
+    case NavigationPage.LOGIN:
+      return "/login";
+    case NavigationPage.GMAIL:
+      return "/gmail";
+    case NavigationPage.HOME:
+    default:
+      return "/";
+  }
+};
+
 export default function App() {
   // Theme state defaulting to dark with local persistence
   const [theme, setTheme] = useState<'dark' | 'light'>(() => {
@@ -90,7 +154,31 @@ export default function App() {
     const cached = localStorage.getItem("agrosensix_cached_user");
     return cached === "Admin Agronomist" || cached === "Certified Agronomist" || cached === "Admin Farmer";
   });
-  const [currentPage, setCurrentPage] = useState<NavigationPage>(NavigationPage.HOME);
+  const [currentPage, setCurrentPage] = useState<NavigationPage>(() => {
+    if (typeof window !== "undefined") {
+      return getPageFromPath(window.location.pathname);
+    }
+    return NavigationPage.HOME;
+  });
+
+  // Keep browser address bar URL synchronized with currentPage state
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const targetPath = getPathFromPage(currentPage);
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState({ page: currentPage }, "", targetPath);
+    }
+  }, [currentPage]);
+
+  // Listen to browser Back / Forward buttons (popstate)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handlePopState = () => {
+      setCurrentPage(getPageFromPath(window.location.pathname));
+    };
+    window.addEventListener("popstate", handlePopState);
+    return () => window.removeEventListener("popstate", handlePopState);
+  }, []);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Core Biological States populated in real-time from Firestore backhaul or offlineStorage fallbacks
@@ -1062,6 +1150,33 @@ export default function App() {
         {/* Main Core Section Content Viewport bounds */}
         <main className="flex-1 w-full max-w-7xl mx-auto p-4 md:p-6 pb-20 relative">
           
+          {/* Prominent Offline Mode Banner */}
+          {(!isOnline || forceOffline) && (
+            <div className="mb-6 bg-gradient-to-r from-amber-950/80 via-amber-900/60 to-amber-950/80 border border-amber-500/40 text-amber-200 p-3.5 px-4 rounded-2xl text-xs font-mono flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 shadow-xl backdrop-blur-md animate-fade-in">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-amber-500/20 border border-amber-500/30 rounded-xl text-amber-400 shrink-0">
+                  <WifiOff className="w-4 h-4 animate-pulse" />
+                </div>
+                <div>
+                  <p className="font-bold uppercase tracking-wider text-amber-300">
+                    {forceOffline ? "SIMULATED OFFLINE MODE ACTIVE" : "OFFLINE GRID SYSTEM ACTIVE — OPERATING WITHOUT INTERNET"}
+                  </p>
+                  <p className="text-[11px] text-amber-300/80 font-sans mt-0.5">
+                    Operating on local storage cache. All actions & telemetry are cached locally and will synchronize automatically when connection returns.
+                  </p>
+                </div>
+              </div>
+              {forceOffline && (
+                <button
+                  onClick={() => setForceOffline(false)}
+                  className="px-3 py-1.5 bg-amber-500/20 hover:bg-amber-500/30 border border-amber-500/40 rounded-xl text-amber-300 text-[10px] uppercase font-bold tracking-wider transition-colors shrink-0 cursor-pointer"
+                >
+                  GO ONLINE
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Dynamic Water Pump manual pulse warning overlay banner */}
           {pump.pulsingTimerSec > 0 && (
             <div className="mb-6 bg-[#081e24] border border-cyan-800/40 text-cyan-300 p-3.5 pr-12 rounded-2xl text-xs font-mono flex items-center justify-between animate-pulse relative shadow-lg">
