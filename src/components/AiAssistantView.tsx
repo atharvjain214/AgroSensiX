@@ -21,7 +21,12 @@ import {
   Square,
   Sliders,
   Settings,
-  RotateCcw
+  RotateCcw,
+  Search,
+  MapPin,
+  Image as ImageIcon,
+  Brain,
+  Trash2
 } from "lucide-react";
 
 interface LangInfo {
@@ -620,6 +625,13 @@ All other telemetry sectors (including solar grids, pumps, and temperature senso
   const [isLoading, setIsLoading] = useState(false);
   const [errorStatus, setErrorStatus] = useState<string | null>(null);
 
+  // Advanced AI settings and attachments
+  const [modelMode, setModelMode] = useState<"general" | "thinking" | "low-latency">("general");
+  const [searchGrounding, setSearchGrounding] = useState<boolean>(false);
+  const [mapsGrounding, setMapsGrounding] = useState<boolean>(false);
+  const [attachedImage, setAttachedImage] = useState<string | null>(null); // base64 string
+  const [attachedImageMime, setAttachedImageMime] = useState<string | null>(null);
+
   // Voice recognition (SpeechToText) variables
   const [isRecording, setIsRecording] = useState(false);
   const [recordingStatus, setRecordingStatus] = useState("");
@@ -1149,6 +1161,13 @@ All other telemetry sectors (including solar grids, pumps, and temperature senso
 
     try {
       const customApiKey = typeof window !== "undefined" ? localStorage.getItem("agrosensix_custom_api_key") || "" : "";
+      
+      // Clear image state after capturing the parameters
+      const currentImage = attachedImage;
+      const currentImageMime = attachedImageMime;
+      setAttachedImage(null);
+      setAttachedImageMime(null);
+
       const response = await fetch("/api/gemini/chat", {
         method: "POST",
         headers: { 
@@ -1157,7 +1176,12 @@ All other telemetry sectors (including solar grids, pumps, and temperature senso
         },
         body: JSON.stringify({ 
           message: textToSend, 
-          history: conversationHistoryForApi 
+          history: conversationHistoryForApi,
+          mode: modelMode,
+          searchGrounding,
+          mapsGrounding,
+          image: currentImage,
+          imageMimeType: currentImageMime,
         }),
       });
 
@@ -1176,6 +1200,7 @@ All other telemetry sectors (including solar grids, pumps, and temperature senso
 
       let accumulatedContent = "";
       let partialLine = "";
+      let accumulatedGrounding: any = null;
 
       while (true) {
         const { done, value } = await reader.read();
@@ -1196,12 +1221,21 @@ All other telemetry sectors (including solar grids, pumps, and temperature senso
               const parsed = JSON.parse(dataStr);
               if (parsed.text) {
                 accumulatedContent += parsed.text;
-                setMessages((prev) =>
-                  prev.map((msg) =>
-                    msg.id === assistantMsgId ? { ...msg, content: accumulatedContent } : msg
-                  )
-                );
               }
+              if (parsed.groundingMetadata) {
+                accumulatedGrounding = parsed.groundingMetadata;
+              }
+              setMessages((prev) =>
+                prev.map((msg) =>
+                  msg.id === assistantMsgId 
+                    ? { 
+                        ...msg, 
+                        content: accumulatedContent,
+                        ...(accumulatedGrounding ? { groundingMetadata: accumulatedGrounding } : {})
+                      } 
+                    : msg
+                )
+              );
             } catch (err) {
               console.debug("Parsed line raw fallback: ", dataStr);
             }
@@ -1220,6 +1254,9 @@ All other telemetry sectors (including solar grids, pumps, and temperature senso
             if (parsed.text) {
               accumulatedContent += parsed.text;
             }
+            if (parsed.groundingMetadata) {
+              accumulatedGrounding = parsed.groundingMetadata;
+            }
           } catch (e) {}
         }
       }
@@ -1235,7 +1272,14 @@ All other telemetry sectors (including solar grids, pumps, and temperature senso
 
       setMessages((prev) =>
         prev.map((msg) =>
-          msg.id === assistantMsgId ? { ...msg, content: cleanSpeechText, detectedLanguage: foundLanguage } : msg
+          msg.id === assistantMsgId 
+            ? { 
+                ...msg, 
+                content: cleanSpeechText, 
+                detectedLanguage: foundLanguage,
+                ...(accumulatedGrounding ? { groundingMetadata: accumulatedGrounding } : {})
+              } 
+            : msg
         )
       );
 
@@ -1406,6 +1450,42 @@ All other telemetry sectors (including solar grids, pumps, and temperature senso
                       <p className="leading-relaxed whitespace-pre-wrap">{msg.content}</p>
                     )}
 
+                    {/* Render Google Search / Maps Grounding Metadata if present */}
+                    {isAssistant && msg.groundingMetadata && (
+                      <div className="mt-4 pt-3 border-t border-zinc-900/30">
+                        <div className="flex items-center gap-1.5 text-emerald-400 font-mono text-[9px] uppercase tracking-wider font-extrabold mb-2 select-none">
+                          <Search className="w-3 h-3 text-emerald-400" />
+                          Google Grounded Sources
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          {msg.groundingMetadata.groundingChunks?.map((chunk: any, chunkIdx: number) => {
+                            const title = chunk.web?.title || `Source [${chunkIdx + 1}]`;
+                            const uri = chunk.web?.uri;
+                            if (!uri) return null;
+                            return (
+                              <a
+                                key={chunkIdx}
+                                href={uri}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                referrerPolicy="no-referrer"
+                                className="px-2.5 py-1.5 bg-[#051110] hover:bg-[#071d1b] border border-emerald-500/15 hover:border-emerald-500/35 rounded-lg text-[9px] font-mono text-emerald-400 font-bold tracking-tight transition max-w-xs truncate flex items-center gap-1 cursor-pointer"
+                                title={title}
+                              >
+                                <span className="w-1 h-1 rounded-full bg-emerald-400 shrink-0" />
+                                {title}
+                              </a>
+                            );
+                          })}
+                        </div>
+                        {msg.groundingMetadata.searchEntryPoint?.sdkBlob && (
+                          <div className="mt-2 text-[8px] font-mono text-zinc-500">
+                            Search Query: <span className="text-zinc-400 italic">"{msg.groundingMetadata.searchEntryPoint?.sdkBlob}"</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
                     {/* Speech Player Micro Control Bar for currently spoken answers */}
                     {isThisPlaying && (
                       <div className="mt-3.5 py-1.5 px-3 bg-[#0a1e1b] border border-emerald-500/15 rounded-lg flex items-center justify-between gap-3 animate-pulse">
@@ -1558,6 +1638,156 @@ All other telemetry sectors (including solar grids, pumps, and temperature senso
                 </div>
               </div>
             )}
+
+            {/* Advanced Gemini AI Engine Control Panel & Image Attachment preview */}
+            <div className="flex flex-col gap-2.5 p-3 bg-zinc-900/35 border border-zinc-900 rounded-xl">
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-zinc-900/40 pb-2">
+                <div className="flex items-center gap-1.5 text-[10px] font-mono text-zinc-400 font-bold">
+                  <Brain className="w-3.5 h-3.5 text-emerald-400 animate-pulse" />
+                  Gemini Intelligence Mode:
+                </div>
+                
+                {/* Mode Selector buttons */}
+                <div className="flex bg-zinc-950 p-1 rounded-lg border border-zinc-900">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setModelMode("general");
+                    }}
+                    className={`px-2.5 py-1 rounded text-[9px] font-mono font-bold tracking-tight transition ${
+                      modelMode === "general"
+                        ? "bg-[#09352c] text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.1)]"
+                        : "text-zinc-500 hover:text-zinc-300"
+                    }`}
+                    title="Highly capable model for general text and reasoning tasks (gemini-3.5-flash)"
+                  >
+                    General (3.5)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setModelMode("thinking");
+                      setSearchGrounding(false);
+                      setMapsGrounding(false);
+                    }}
+                    className={`px-2.5 py-1 rounded text-[9px] font-mono font-bold tracking-tight transition ${
+                      modelMode === "thinking"
+                        ? "bg-[#09352c] text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.1)]"
+                        : "text-zinc-500 hover:text-zinc-300"
+                    }`}
+                    title="High-thinking capability for extremely complex reasoning and scientific queries (gemini-3.1-pro-preview)"
+                  >
+                    High Thinking
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setModelMode("low-latency");
+                    }}
+                    className={`px-2.5 py-1 rounded text-[9px] font-mono font-bold tracking-tight transition ${
+                      modelMode === "low-latency"
+                        ? "bg-[#09352c] text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.1)]"
+                        : "text-zinc-500 hover:text-zinc-300"
+                    }`}
+                    title="Low-latency responsive mode optimized for fast interactions (gemini-3.1-flash-lite)"
+                  >
+                    Fast (Lite)
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-3 text-[9px] font-mono">
+                {/* Search / Maps Grounding tools */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <button
+                    type="button"
+                    disabled={modelMode === "thinking"}
+                    onClick={() => setSearchGrounding(!searchGrounding)}
+                    className={`px-2 py-1 rounded-md border flex items-center gap-1 transition ${
+                      searchGrounding
+                        ? "bg-emerald-950/20 text-emerald-400 border-emerald-500/20"
+                        : "bg-zinc-950/45 text-zinc-500 border-zinc-900 hover:text-zinc-400"
+                    } ${modelMode === "thinking" ? "opacity-40 cursor-not-allowed" : ""}`}
+                    title="Injects Google Search data into responses for real-time external agricultural accuracy"
+                  >
+                    <Search className="w-2.5 h-2.5" />
+                    Google Search {searchGrounding ? "ON" : "OFF"}
+                  </button>
+                  
+                  <button
+                    type="button"
+                    disabled={modelMode === "thinking"}
+                    onClick={() => setMapsGrounding(!mapsGrounding)}
+                    className={`px-2 py-1 rounded-md border flex items-center gap-1 transition ${
+                      mapsGrounding
+                        ? "bg-emerald-950/20 text-emerald-400 border-emerald-500/20"
+                        : "bg-zinc-950/45 text-zinc-500 border-zinc-900 hover:text-zinc-400"
+                    } ${modelMode === "thinking" ? "opacity-40 cursor-not-allowed" : ""}`}
+                    title="Injects Google Maps routing and location details for precise visual geographic grounding"
+                  >
+                    <MapPin className="w-2.5 h-2.5" />
+                    Google Maps {mapsGrounding ? "ON" : "OFF"}
+                  </button>
+                </div>
+
+                {/* Base64 Image Vision Upload Button */}
+                <div className="flex items-center gap-2">
+                  <label className="px-2 py-1 bg-zinc-950 hover:bg-zinc-900 border border-zinc-900 hover:border-zinc-800 text-zinc-400 hover:text-emerald-400 rounded-md flex items-center gap-1 transition cursor-pointer select-none">
+                    <ImageIcon className="w-2.5 h-2.5 text-emerald-400" />
+                    Attach Crop Photo
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const reader = new FileReader();
+                          reader.onloadend = () => {
+                            const result = reader.result as string;
+                            const commaIdx = result.indexOf(",");
+                            if (commaIdx !== -1) {
+                              setAttachedImage(result.substring(commaIdx + 1));
+                              setAttachedImageMime(file.type);
+                            }
+                          };
+                          reader.readAsDataURL(file);
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+              </div>
+
+              {/* Preview image thumbnail with delete option */}
+              {attachedImage && (
+                <div className="flex items-center justify-between bg-zinc-950 p-1.5 rounded-lg border border-emerald-500/10 max-w-xs animate-fade-in">
+                  <div className="flex items-center gap-2">
+                    <img
+                      src={`data:${attachedImageMime};base64,${attachedImage}`}
+                      alt="Crop Attachment"
+                      referrerPolicy="no-referrer"
+                      className="w-10 h-10 object-cover rounded border border-zinc-900"
+                    />
+                    <div className="text-[8px] font-mono text-zinc-500">
+                      <span className="text-emerald-400 font-bold block">Photo Attached</span>
+                      {(attachedImage.length * 0.75 / 1024).toFixed(1)} KB (Base64)
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAttachedImage(null);
+                      setAttachedImageMime(null);
+                    }}
+                    className="p-1 hover:bg-zinc-900 rounded text-zinc-500 hover:text-red-400 transition cursor-pointer"
+                    title="Remove Photo"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
+            </div>
 
             <form 
               onSubmit={handlesSubmitForm} 

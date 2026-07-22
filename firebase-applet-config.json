@@ -1,10 +1,12 @@
 {
   "projectId": "agrosensix",
-  "appId": "1:754188887676:web:4f29e45bf584ca1ea54bf9",
+  "appId": "1:754188887676:web:ae646dabe6997c88a54bf9",
   "apiKey": "AIzaSyCIubhiNmRS7o-TwsXB4NQjTGYsjjEbZ6s",
   "authDomain": "agrosensix.firebaseapp.com",
-  "firestoreDatabaseId": "(default)",
+  "firestoreDatabaseId": "ai-studio-agrosensix-e28a9b8f-4bef-4dd3-aece-798c6c2171af",
   "storageBucket": "agrosensix.firebasestorage.app",
   "messagingSenderId": "754188887676",
-  "measurementId": "G-X5TVH1TQ33"
+  "measurementId": "",
+  "oAuthClientId": "754188887676-l2jgdeqtebl681fcdqum26i7gft879ud.apps.googleusercontent.com",
+  "recaptchaSiteKey": ""
 }

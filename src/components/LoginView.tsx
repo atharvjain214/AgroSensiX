@@ -196,6 +196,18 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccessLogin, onCancel }
     setIsScanning(true);
     try {
       if (isSignUp) {
+        // Register in Cloud SQL first to perform server-side validation and database storage
+        const regRes = await fetch("/api/auth/register", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ fullName, email, password })
+        });
+        const regData = await regRes.json();
+        if (!regRes.ok) {
+          throw new Error(regData.error || "Failed to register with Cloud SQL.");
+        }
+
+        // Successfully stored in Cloud SQL, now replicate in Firebase client for offline/realtime listeners
         const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
         await updateProfile(userCredential.user, { displayName: fullName.trim() });
         
@@ -212,6 +224,18 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccessLogin, onCancel }
           emailVerified: false,
         });
       } else {
+        // Authenticate with Cloud SQL first
+        const loginRes = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email.trim(), password })
+        });
+        const loginData = await loginRes.json();
+        if (!loginRes.ok) {
+          throw new Error(loginData.error || "Invalid email or password.");
+        }
+
+        // Successfully verified in Cloud SQL, now sign in to Firebase client
         const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
         await setDoc(doc(db, "users", userCredential.user.uid), {
           lastLogin: new Date().toISOString(),

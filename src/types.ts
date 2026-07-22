@@ -65,4 +65,5 @@ export interface ChatMessage {
   content: string;
   timestamp: Date;
   detectedLanguage?: string;
+  groundingMetadata?: any;
 }

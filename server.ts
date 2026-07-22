@@ -1,18 +1,27 @@
 import express from "express";
 import path from "path";
 import dotenv from "dotenv";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, ThinkingLevel } from "@google/genai";
 import { createServer as createViteServer } from "vite";
 import fs from "fs";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import nodemailer from "nodemailer";
+import { createServer } from "http";
+import { WebSocketServer } from "ws";
 
 import { initializeApp as initFirebaseApp } from "firebase/app";
 import { initializeFirestore, collection, addDoc, getDocs, query, where, doc, getDoc, setDoc } from "firebase/firestore";
 
+import { db as pgDb } from "./src/db/index.ts";
+import { users as pgUsers } from "./src/db/schema.ts";
+import { eq } from "drizzle-orm";
+import { initializeApp as initAdminApp, getApps as getAdminApps } from "firebase-admin/app";
+import { getAuth as getAdminAuth } from "firebase-admin/auth";
+
 // Load Firebase Config
 let firebaseDb: any = null;
+let adminAuth: any = null;
 try {
   const configRaw = fs.readFileSync(path.join(process.cwd(), "firebase-applet-config.json"), "utf8");
   const firebaseConfig = JSON.parse(configRaw);
@@ -20,6 +29,15 @@ try {
   const databaseId = firebaseConfig.firestoreDatabaseId || "ai-studio-e28a9b8f-4bef-4dd3-aece-798c6c2171af";
   firebaseDb = initializeFirestore(firebaseApp, {}, databaseId);
   console.log(`Firebase initialized on server successfully using db: ${databaseId}`);
+
+  // Initialize Firebase Admin SDK
+  if (!getAdminApps().length) {
+    initAdminApp({
+      projectId: firebaseConfig.projectId || "agrosensix",
+    });
+  }
+  adminAuth = getAdminAuth();
+  console.log("Firebase Admin SDK initialized successfully.");
 } catch (e) {
   console.error("Failed to initialize Firebase on server. Please check firebase-applet-config.json", e);
 }
@@ -321,7 +339,7 @@ function getSimulatedBotanicalResponse(message: string, isFromOutage: boolean = 
 
 // API routes go here FIRST
 app.post("/api/gemini/chat", async (req, res) => {
-  const { message, history, apiKey: bodyKey } = req.body;
+  const { message, history, apiKey: bodyKey, mode, searchGrounding, mapsGrounding, image, imageMimeType } = req.body;
   const customKey = (req.headers["x-custom-api-key"] as string) || bodyKey || process.env.OPENAI_API_KEY;
 
   if (!message) {
@@ -435,16 +453,28 @@ app.post("/api/gemini/chat", async (req, res) => {
   }
   
   // Append current message
+  const currentParts: any[] = [];
+  if (image && imageMimeType) {
+    currentParts.push({
+      inlineData: {
+        data: image,
+        mimeType: imageMimeType,
+      }
+    });
+  }
+  currentParts.push({ text: message || " " });
+
   rawContents.push({
     role: "user",
-    parts: [{ text: message || " " }]
+    parts: currentParts,
   });
 
-  // Collapse consecutive roles
+  // Collapse consecutive roles (keep first role's parts, but append text/other parts)
   const contentsList: any[] = [];
   for (const item of rawContents) {
     if (contentsList.length > 0 && contentsList[contentsList.length - 1].role === item.role) {
-      contentsList[contentsList.length - 1].parts[0].text += "\n" + item.parts[0].text;
+      const lastItem = contentsList[contentsList.length - 1];
+      lastItem.parts = [...lastItem.parts, ...item.parts];
     } else {
       contentsList.push(item);
     }
@@ -460,18 +490,44 @@ app.post("/api/gemini/chat", async (req, res) => {
       const maxAttempts = 3;
       let lastError: any = null;
 
+      // Select correct model according to guidelines and features
+      let selectedModel = "gemini-3.5-flash"; // Default general task model
+      if (image) {
+        selectedModel = "gemini-3.1-pro-preview"; // Vision reasoning tasks MUST use gemini-3.1-pro-preview
+      } else if (mode === "thinking") {
+        selectedModel = "gemini-3.1-pro-preview"; // Complex tasks & thinking mode MUST use gemini-3.1-pro-preview
+      } else if (mode === "low-latency") {
+        selectedModel = "gemini-3.1-flash-lite"; // Low-latency response mode MUST use gemini-3.1-flash-lite
+      } else if (searchGrounding || mapsGrounding) {
+        selectedModel = "gemini-3.5-flash"; // Grounding tasks MUST use gemini-3.5-flash
+      }
+
+      const config: any = {
+        systemInstruction: BOTANICAL_SYSTEM_PROMPT,
+        temperature: 0.7,
+      };
+
+      if (mode === "thinking") {
+        config.thinkingConfig = {
+          thinkingLevel: ThinkingLevel.HIGH,
+        };
+        // Ensure we do NOT set maxOutputTokens for high thinking mode!
+      }
+
+      if (searchGrounding) {
+        config.tools = [{ googleSearch: {} }];
+      } else if (mapsGrounding) {
+        config.tools = [{ googleMaps: {} }];
+      }
+
       while (attempts < maxAttempts) {
         attempts++;
-        const selectedModel = "gemini-2.5-flash";
         try {
           console.log(`Sending streaming prompt to Gemini using ${selectedModel} (Attempt ${attempts}/${maxAttempts})...`);
           responseStream = await activeAiClient.models.generateContentStream({
             model: selectedModel,
             contents: contentsList,
-            config: {
-              systemInstruction: BOTANICAL_SYSTEM_PROMPT,
-              temperature: 0.7,
-            },
+            config: config,
           });
           break; // successfully generated, break out of retry loop
         } catch (err: any) {
@@ -490,7 +546,8 @@ app.post("/api/gemini/chat", async (req, res) => {
 
       for await (const chunk of responseStream) {
         const text = chunk.text || "";
-        res.write(`data: ${JSON.stringify({ text })}\n\n`);
+        const groundingMetadata = chunk.candidates?.[0]?.groundingMetadata;
+        res.write(`data: ${JSON.stringify({ text, groundingMetadata })}\n\n`);
       }
       res.write("data: [DONE]\n\n");
       res.end();
@@ -525,51 +582,86 @@ app.post("/api/gemini/chat", async (req, res) => {
 
 app.post("/api/auth/register", async (req, res) => {
   try {
-    if (!firebaseDb) {
-      return res.status(500).json({ error: "Database not configured." });
-    }
-
-    const { fullName, email, password, role } = req.body;
+    const { fullName, email, password } = req.body;
 
     if (!fullName || !email || !password) {
       return res.status(400).json({ error: "Full name, email, and password are required." });
     }
 
-    // Check if user already exists
-    const usersRef = collection(firebaseDb, "users");
-    const q = query(usersRef, where("email", "==", email.toLowerCase()));
-    const querySnapshot = await getDocs(q);
+    // Server-side validations as specified:
+    // Full Name: Required, Minimum 2 characters
+    if (fullName.trim().length < 2) {
+      return res.status(400).json({ error: "Full name must be at least 2 characters long." });
+    }
 
-    if (!querySnapshot.empty) {
+    // Email: Valid format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: "Please enter a valid email address." });
+    }
+
+    // Password: Minimum 8 characters, Uppercase, Lowercase, Number, Special Character
+    if (password.length < 8) {
+      return res.status(400).json({ error: "Password must be at least 8 characters long." });
+    }
+    if (!/[A-Z]/.test(password)) {
+      return res.status(400).json({ error: "Password must contain at least one uppercase letter." });
+    }
+    if (!/[a-z]/.test(password)) {
+      return res.status(400).json({ error: "Password must contain at least one lowercase letter." });
+    }
+    if (!/[0-9]/.test(password)) {
+      return res.status(400).json({ error: "Password must contain at least one number." });
+    }
+    if (!/[!@#$%^&*()_+\-=\[\]{};':",./<>?|\\~`]/.test(password)) {
+      return res.status(400).json({ error: "Password must contain at least one special character." });
+    }
+
+    const normalizedEmail = email.toLowerCase().trim();
+
+    // Query Layer try/catch to check user existence in Cloud SQL
+    let existingUsers;
+    try {
+      existingUsers = await pgDb.select().from(pgUsers).where(eq(pgUsers.email, normalizedEmail));
+    } catch (dbErr) {
+      console.error("Database query to check user existence failed:", dbErr);
+      throw new Error("Failed to check user records in relational database. Please try again later.", { cause: dbErr });
+    }
+
+    if (existingUsers.length > 0) {
       return res.status(400).json({ error: "Email already exists. Please login." });
     }
 
-    // Hash the password
+    // Hash the password securely using bcrypt
     const salt = await bcrypt.genSalt(12);
     const passwordHash = await bcrypt.hash(password, salt);
 
-    // Create user document with pre-generated ID
-    const newDocRef = doc(usersRef);
-    const now = new Date().toISOString();
+    const now = new Date();
     const newUser = {
-      uid: newDocRef.id,
-      email: email.toLowerCase(),
-      fullName,
-      role: role || "Farmer",
-      passwordHash, // Storing only the hash
+      fullName: fullName.trim(),
+      email: normalizedEmail,
+      passwordHash,
       createdAt: now,
       updatedAt: now,
       lastLogin: now,
-      profileImage: "",
-      accountStatus: "active",
       emailVerified: false,
+      accountStatus: "active",
     };
 
-    await setDoc(newDocRef, newUser);
+    // Query Layer try/catch to insert the user into Cloud SQL
+    let insertedUsers;
+    try {
+      insertedUsers = await pgDb.insert(pgUsers).values(newUser).returning();
+    } catch (dbErr) {
+      console.error("Database query to insert user failed:", dbErr);
+      throw new Error("Failed to store user profile in relational database. Please try again later.", { cause: dbErr });
+    }
+
+    const insertedUser = insertedUsers[0];
 
     // Generate JWT
     const token = jwt.sign(
-      { uid: newDocRef.id, email: newUser.email, role: newUser.role, fullName: newUser.fullName },
+      { uid: String(insertedUser.id), email: insertedUser.email, role: "Farmer", fullName: insertedUser.fullName },
       JWT_SECRET,
       { expiresIn: "7d" }
     );
@@ -578,10 +670,10 @@ app.post("/api/auth/register", async (req, res) => {
       success: true,
       token,
       user: {
-        uid: newDocRef.id,
-        email: newUser.email,
-        fullName: newUser.fullName,
-        role: newUser.role,
+        uid: String(insertedUser.id),
+        email: insertedUser.email,
+        fullName: insertedUser.fullName,
+        role: "Farmer",
       }
     });
 
@@ -593,42 +685,52 @@ app.post("/api/auth/register", async (req, res) => {
 
 app.post("/api/auth/login", async (req, res) => {
   try {
-    if (!firebaseDb) {
-      return res.status(500).json({ error: "Database not configured." });
-    }
-
     const { email, password } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ error: "Email and password are required." });
     }
 
-    // Find user by email
-    const usersRef = collection(firebaseDb, "users");
-    const q = query(usersRef, where("email", "==", email.toLowerCase()));
-    const querySnapshot = await getDocs(q);
+    const normalizedEmail = email.toLowerCase().trim();
 
-    if (querySnapshot.empty) {
+    // Query Layer try/catch to find user in Cloud SQL
+    let matchedUsers;
+    try {
+      matchedUsers = await pgDb.select().from(pgUsers).where(eq(pgUsers.email, normalizedEmail));
+    } catch (dbErr) {
+      console.error("Database query to retrieve user failed:", dbErr);
+      throw new Error("Failed to retrieve user record from database. Please try again later.", { cause: dbErr });
+    }
+
+    if (matchedUsers.length === 0) {
       return res.status(401).json({ error: "Invalid email or password." });
     }
 
-    const userDoc = querySnapshot.docs[0];
-    const userData = userDoc.data();
+    const user = matchedUsers[0];
+
+    // Check account status
+    if (user.accountStatus.toLowerCase() === "disabled") {
+      return res.status(403).json({ error: "Your account is disabled. Please contact support." });
+    }
 
     // Compare password with hash
-    const isMatch = await bcrypt.compare(password, userData.passwordHash);
+    const isMatch = await bcrypt.compare(password, user.passwordHash);
 
     if (!isMatch) {
       return res.status(401).json({ error: "Invalid email or password." });
     }
 
     // Update lastLogin
-    const now = new Date().toISOString();
-    await setDoc(doc(firebaseDb, "users", userDoc.id), { lastLogin: now }, { merge: true });
+    const now = new Date();
+    try {
+      await pgDb.update(pgUsers).set({ lastLogin: now, updatedAt: now }).where(eq(pgUsers.id, user.id));
+    } catch (dbErr) {
+      console.warn("Failed to update last login timestamp in database:", dbErr);
+    }
 
     // Generate JWT
     const token = jwt.sign(
-      { uid: userDoc.id, email: userData.email, role: userData.role, fullName: userData.fullName },
+      { uid: String(user.id), email: user.email, role: "Farmer", fullName: user.fullName },
       JWT_SECRET,
       { expiresIn: "7d" }
     );
@@ -637,16 +739,16 @@ app.post("/api/auth/login", async (req, res) => {
       success: true,
       token,
       user: {
-        uid: userDoc.id,
-        email: userData.email,
-        fullName: userData.fullName,
-        role: userData.role,
+        uid: String(user.id),
+        email: user.email,
+        fullName: user.fullName,
+        role: "Farmer",
       }
     });
 
   } catch (error: any) {
     console.error("Login error:", error);
-    res.status(500).json({ error: "Failed to login. Please try again." });
+    res.status(500).json({ error: error.message || "Failed to login. Please try again." });
   }
 });
 
@@ -895,17 +997,52 @@ app.post("/api/auth/recover/reset-password", async (req, res) => {
       return res.status(400).json({ error: "Verification code has expired. Please request a new code." });
     }
 
-    // Find the user or create if account was created with Google/guest
-    const usersRef = collection(firebaseDb, "users");
-    const userQ = query(usersRef, where("email", "==", normalizedEmail));
-    const userSnapshot = await getDocs(userQ);
-
     // Hash the new password
     const salt = await bcrypt.genSalt(12);
     const passwordHash = await bcrypt.hash(newPassword, salt);
 
+    // Update or insert password in Cloud SQL
+    let matchedUsers;
+    try {
+      matchedUsers = await pgDb.select().from(pgUsers).where(eq(pgUsers.email, normalizedEmail));
+    } catch (dbErr) {
+      console.error("Database query to check user failed:", dbErr);
+      throw new Error("Failed to search user records in relational database.", { cause: dbErr });
+    }
+
+    const now = new Date();
+    if (matchedUsers.length === 0) {
+      // Create user record in Cloud SQL
+      try {
+        await pgDb.insert(pgUsers).values({
+          fullName: normalizedEmail.split("@")[0],
+          email: normalizedEmail,
+          passwordHash,
+          createdAt: now,
+          updatedAt: now,
+          lastLogin: now,
+          emailVerified: false,
+          accountStatus: "active",
+        });
+      } catch (dbErr) {
+        console.error("Failed to insert user into Cloud SQL during reset:", dbErr);
+      }
+    } else {
+      // Update existing user password in Cloud SQL
+      try {
+        await pgDb.update(pgUsers).set({ passwordHash, updatedAt: now }).where(eq(pgUsers.id, matchedUsers[0].id));
+      } catch (dbErr) {
+        console.error("Failed to update password in Cloud SQL during reset:", dbErr);
+      }
+    }
+
+    // Find the user in Firestore or create if account was created with Google/guest
+    const usersRef = collection(firebaseDb, "users");
+    const userQ = query(usersRef, where("email", "==", normalizedEmail));
+    const userSnapshot = await getDocs(userQ);
+
     if (userSnapshot.empty) {
-      // Create user record with new password
+      // Create user record in Firestore
       await addDoc(usersRef, {
         email: normalizedEmail,
         fullName: normalizedEmail.split("@")[0],
@@ -920,6 +1057,17 @@ app.post("/api/auth/recover/reset-password", async (req, res) => {
         passwordHash,
         updatedAt: new Date().toISOString()
       }, { merge: true });
+    }
+
+    // Synchronize password with Firebase Auth using Admin SDK
+    if (adminAuth) {
+      try {
+        const firebaseUser = await adminAuth.getUserByEmail(normalizedEmail);
+        await adminAuth.updateUser(firebaseUser.uid, { password: newPassword });
+        console.log(`Updated Firebase auth password for UID: ${firebaseUser.uid}`);
+      } catch (adminErr) {
+        console.warn("Failed to update Firebase Auth password via Admin SDK:", adminErr);
+      }
     }
 
     // Mark code as used immediately so it can never be reused
@@ -1012,7 +1160,93 @@ if (process.env.NODE_ENV !== "production") {
   });
 }
 
-// Start Server exclusively on port 3000 and 0.0.0.0
-app.listen(PORT, "0.0.0.0", () => {
-  console.log(`[AgroSensiX Server Host] Live on port ${PORT}`);
+// Create HTTP server from Express app
+const server = createServer(app);
+
+// Setup WebSocket Server for Live API voice conversations
+const wss = new WebSocketServer({ noServer: true });
+
+server.on("upgrade", (request, socket, head) => {
+  const pathname = new URL(request.url || "", `http://${request.headers.host}`).pathname;
+  if (pathname === "/api/live") {
+    wss.handleUpgrade(request, socket, head, (ws) => {
+      wss.emit("connection", ws, request);
+    });
+  } else {
+    socket.destroy();
+  }
+});
+
+wss.on("connection", async (clientWs) => {
+  console.log("[WS] Client connected to Live API bridge");
+  const activeKey = process.env.GEMINI_API_KEY;
+  if (!activeKey || activeKey === "MY_GEMINI_API_KEY") {
+    console.error("[WS] GEMINI_API_KEY is not configured.");
+    clientWs.send(JSON.stringify({ error: "No Gemini API key configured on server. Please configure it in Settings." }));
+    clientWs.close();
+    return;
+  }
+
+  try {
+    const ai = new GoogleGenAI({
+      apiKey: activeKey,
+      httpOptions: {
+        headers: {
+          "User-Agent": "aistudio-build",
+        },
+      },
+    });
+
+    const session = await ai.live.connect({
+      model: "gemini-3.1-flash-live-preview",
+      config: {
+        responseModalities: ["AUDIO" as any],
+        speechConfig: {
+          voiceConfig: { prebuiltVoiceConfig: { voiceName: "Zephyr" } },
+        },
+        systemInstruction: "You are AgroSensiX Voice Co-Pilot, a helpful smart-farming assistant. You monitor soil moisture, recommend watering intervals, and track solar status. Keep your responses extremely concise, friendly, and conversational.",
+      },
+      callbacks: {
+        onmessage: (message: any) => {
+          // Send audio output chunk back to client
+          const audio = message.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
+          if (audio) {
+            clientWs.send(JSON.stringify({ audio }));
+          }
+          if (message.serverContent?.interrupted) {
+            clientWs.send(JSON.stringify({ interrupted: true }));
+          }
+        },
+      },
+    });
+
+    clientWs.on("message", (data) => {
+      try {
+        const payload = JSON.parse(data.toString());
+        if (payload.audio) {
+          session.sendRealtimeInput({
+            audio: { data: payload.audio, mimeType: "audio/pcm;rate=16000" },
+          });
+        }
+      } catch (err) {
+        console.error("[WS] Error sending input to Live API session:", err);
+      }
+    });
+
+    clientWs.on("close", () => {
+      console.log("[WS] Client disconnected from Live API bridge");
+      try {
+        session.close();
+      } catch (e) {}
+    });
+  } catch (err: any) {
+    console.error("[WS] Live API connection failed:", err);
+    clientWs.send(JSON.stringify({ error: err.message || "Failed to connect to Live API" }));
+    clientWs.close();
+  }
+});
+
+// Start HTTP + WebSocket Server exclusively on port 3000 and 0.0.0.0
+server.listen(PORT, "0.0.0.0", () => {
+  console.log(`[AgroSensiX Server Host] Live on port ${PORT} with WebSocket Live API on /api/live`);
 });
