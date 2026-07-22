@@ -236,14 +236,25 @@ export const offlineStorage = {
 
     console.log(`[Offline Sync Engine] Attempting background sync for ${queue.length} items to cloud Firestore...`);
     
+    let remainingQueue = [...queue];
+
     for (const item of queue) {
       try {
         const docRef = doc(db, item.collection, item.docId);
         await setDoc(docRef, item.payload, { merge: true });
         result.successCount++;
-      } catch (err) {
+        // Successfully synced, remove from remaining
+        remainingQueue = remainingQueue.filter(q => q !== item);
+      } catch (err: any) {
         console.warn(`[Offline Sync Engine] Local doc push failed for ${item.collection}/${item.docId}:`, err);
         result.errors.push(err);
+        
+        // If it's a permanent error like permission-denied, remove it to prevent eternal looping
+        if (err?.code === 'permission-denied') {
+          console.error(`[Offline Sync Engine] Permanent permission error. Discarding offline change for ${item.collection}/${item.docId}`);
+          remainingQueue = remainingQueue.filter(q => q !== item);
+        }
+        
         try {
           // Standardize offline sync logging using compliance error wrappers
           handleFirestoreError(err, OperationType.WRITE, `${item.collection}/${item.docId}`);
@@ -253,18 +264,26 @@ export const offlineStorage = {
       }
     }
 
-    // Update historical logs sync markers locally
-    if (result.successCount === queue.length) {
-      // Clear queue
+    // Always update the queue with the remaining items
+    if (remainingQueue.length === 0) {
       offlineStorage.clearSyncQueue();
-      
+    } else {
+      setLocalStorage(keys.OFFLINE_QUEUED_CHG, remainingQueue);
+    }
+
+    // Update historical logs sync markers locally
+    if (result.successCount > 0) {
       const irrigLogs = offlineStorage.getIrrigationHistory().map(log => ({ ...log, syncStatus: "synced" as const }));
       offlineStorage.saveIrrigationHistory(irrigLogs);
 
       const tankLogs = offlineStorage.getWaterTankHistory().map(log => ({ ...log, syncStatus: "synced" as const }));
       offlineStorage.saveWaterTankHistory(tankLogs);
-
+    }
+    
+    if (result.successCount === queue.length) {
       console.log(`[Offline Sync Engine] Realtime background synchronization successfully completed.`);
+    } else {
+      console.log(`[Offline Sync Engine] Synchronization partial: ${result.successCount} succeeded, ${result.errors.length} failed.`);
     }
 
     return result;

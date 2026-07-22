@@ -17,7 +17,7 @@ import {
   GoogleAuthProvider, 
   signInWithPopup, 
   createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword, 
+  signInWithEmailAndPassword, sendPasswordResetEmail, 
   updateProfile
 } from "firebase/auth";
 
@@ -197,17 +197,28 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccessLogin, onCancel }
     try {
       if (isSignUp) {
         // Register in Cloud SQL first to perform server-side validation and database storage
-        const regRes = await fetch("/api/auth/register", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ fullName, email, password })
-        });
-        const regData = await regRes.json();
-        if (!regRes.ok) {
-          throw new Error(regData.error || "Failed to register with Cloud SQL.");
+        try {
+          const regRes = await fetch("/api/auth/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ fullName, email, password })
+          });
+          if (regRes.ok) {
+            // Success
+          } else if (regRes.status !== 404 && regRes.status !== 405) {
+            const regData = await regRes.json();
+            throw new Error(regData.error || "Failed to register with Cloud SQL.");
+          } else {
+             console.warn("Cloud SQL API unavailable (Vercel/Offline). Using Firebase fallback.");
+          }
+        } catch (serverErr: any) {
+          if (serverErr.message.includes("Failed to register with Cloud SQL")) {
+            throw serverErr;
+          }
+          console.warn("Cloud SQL registration bypassed:", serverErr.message);
         }
 
-        // Successfully stored in Cloud SQL, now replicate in Firebase client for offline/realtime listeners
+        // Successfully stored in Cloud SQL (or bypassed), now replicate in Firebase client for offline/realtime listeners
         const userCredential = await createUserWithEmailAndPassword(auth, email.trim(), password);
         await updateProfile(userCredential.user, { displayName: fullName.trim() });
         
@@ -225,17 +236,28 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccessLogin, onCancel }
         });
       } else {
         // Authenticate with Cloud SQL first
-        const loginRes = await fetch("/api/auth/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: email.trim(), password })
-        });
-        const loginData = await loginRes.json();
-        if (!loginRes.ok) {
-          throw new Error(loginData.error || "Invalid email or password.");
+        try {
+          const loginRes = await fetch("/api/auth/login", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: email.trim(), password })
+          });
+          if (loginRes.ok) {
+            // Success
+          } else if (loginRes.status !== 404 && loginRes.status !== 405) {
+            const loginData = await loginRes.json();
+            throw new Error(loginData.error || "Invalid email or password.");
+          } else {
+            console.warn("Cloud SQL API unavailable (Vercel/Offline). Using Firebase fallback.");
+          }
+        } catch (serverErr: any) {
+           if (serverErr.message.includes("Invalid email") || serverErr.message.includes("disabled")) {
+             throw serverErr;
+           }
+           console.warn("Cloud SQL login bypassed:", serverErr.message);
         }
 
-        // Successfully verified in Cloud SQL, now sign in to Firebase client
+        // Successfully verified in Cloud SQL (or bypassed), now sign in to Firebase client
         const userCredential = await signInWithEmailAndPassword(auth, email.trim(), password);
         await setDoc(doc(db, "users", userCredential.user.uid), {
           lastLogin: new Date().toISOString(),
@@ -273,6 +295,11 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccessLogin, onCancel }
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: forgotEmail.trim() })
       });
+      
+      if (res.status === 404 || res.status === 405) {
+        throw new Error("API_UNAVAILABLE");
+      }
+      
       const data = await res.json();
       if (res.ok) {
         setIsRecoveryCodeSent(true);
@@ -285,7 +312,17 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccessLogin, onCancel }
         setErrorText(data.error || "Failed to send code");
       }
     } catch (err: any) {
-      setErrorText(err.message || "Network error");
+      if (err.message === "API_UNAVAILABLE" || err.message.includes("fetch")) {
+        console.warn("Cloud SQL API unavailable (Vercel/Offline). Using Firebase fallback for password reset.");
+        try {
+          await sendPasswordResetEmail(auth, forgotEmail.trim());
+          setSuccessText("Password reset link sent to your email by Firebase! Please check your inbox.");
+        } catch (firebaseErr: any) {
+          setErrorText(firebaseErr.message || "Failed to send recovery email.");
+        }
+      } else {
+        setErrorText(err.message || "Network error");
+      }
     } finally {
       setIsScanning(false);
     }

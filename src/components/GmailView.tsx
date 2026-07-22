@@ -412,6 +412,10 @@ export const GmailView: React.FC<GmailViewProps> = ({ sectors, battery, pump }) 
       });
 
       if (!listResponse.ok) {
+        if (listResponse.status === 401 || listResponse.status === 403) {
+          handleDisconnect();
+          throw new Error("Access token expired or missing scopes. Disconnected. Please reconnect.");
+        }
         throw new Error("Failed to scan mailbox list via Gmail API.");
       }
 

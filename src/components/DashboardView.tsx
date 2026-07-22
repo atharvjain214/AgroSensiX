@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { motion } from "motion/react";
 import { SectorData, SensorNode, BatteryTelemetry, WaterPumpTelemetry } from "../types";
 import { 
   LineChart,
@@ -185,7 +186,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6">
         
         {/* CARD 1: CROP HEALTH INDEX (LG: COL-SPAN-4) */}
-        <div className="lg:col-span-4 bg-[#03090f]/75 border border-zinc-900/90 rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between shadow-xl min-h-[220px]">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.05 }} className="lg:col-span-4 bg-[#03090f]/75 border border-zinc-900/90 rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between shadow-xl min-h-[220px]">
           <div className="absolute top-0 right-0 w-28 h-28 bg-emerald-500/5 rounded-full blur-2xl pointer-events-none" />
           
           <div className="flex justify-between items-start">
@@ -225,10 +226,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <span>CROP CATEGORY:</span>
             <span className="text-emerald-400 font-bold">{activeSector.cropType}</span>
           </div>
-        </div>
+        </motion.div>
 
         {/* CARD 2: SOIL MOISTURE (LG: COL-SPAN-4) */}
-        <div className="lg:col-span-4 bg-[#03090f]/75 border border-zinc-900/90 rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between shadow-xl min-h-[220px]">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }} className="lg:col-span-4 bg-[#03090f]/75 border border-zinc-900/90 rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between shadow-xl min-h-[220px]">
           <div className="absolute top-0 right-0 w-28 h-28 bg-cyan-500/5 rounded-full blur-2xl pointer-events-none" />
           
           <div className="flex justify-between items-start">
@@ -269,10 +270,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <span>MONITOR STATIONS:</span>
             <span className="text-cyan-300 font-bold">{activeSector.nodes.length} SENSOR NODES</span>
           </div>
-        </div>
+        </motion.div>
 
         {/* CARD 3: WATER RESERVOIR VOLUME (LG: COL-SPAN-4) */}
-        <div className="lg:col-span-4 bg-[#03090f]/75 border border-zinc-900/90 rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between shadow-xl min-h-[220px]">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.15 }} className="lg:col-span-4 bg-[#03090f]/75 border border-zinc-900/90 rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between shadow-xl min-h-[220px]">
           <div className="absolute top-0 right-0 w-28 h-28 bg-teal-500/5 rounded-full blur-2xl pointer-events-none" />
           
           <div className="flex justify-between items-start">
@@ -308,10 +309,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <span>SYSTEM STATE:</span>
             <span className="text-cyan-300 font-bold">{pump.status.toUpperCase()} PRESSETS</span>
           </div>
-        </div>
+        </motion.div>
 
         {/* CARD 4: SOLAR GENERATION POWER (LG: COL-SPAN-3) */}
-        <div className="lg:col-span-3 bg-[#03090f]/75 border border-zinc-900/90 rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between shadow-xl min-h-[180px]">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }} className="lg:col-span-3 bg-[#03090f]/75 border border-zinc-900/90 rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between shadow-xl min-h-[180px]">
           <div className="absolute top-0 right-0 w-24 h-24 bg-amber-500/5 rounded-full blur-xl pointer-events-none" />
           
           <div className="flex justify-between items-start">
@@ -335,10 +336,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <span>SAVINGS EST:</span>
             <span className="text-amber-400">3,120 kW (Eco Grid)</span>
           </div>
-        </div>
+        </motion.div>
 
         {/* CARD 5: AMBIENT HEAT TEMPERATURE (LG: COL-SPAN-3) */}
-        <div className="lg:col-span-3 bg-[#03090f]/75 border border-zinc-900/90 rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between shadow-xl min-h-[180px]">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.25 }} className="lg:col-span-3 bg-[#03090f]/75 border border-zinc-900/90 rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between shadow-xl min-h-[180px]">
           <div className="absolute top-0 right-0 w-24 h-24 bg-orange-500/5 rounded-full blur-xl pointer-events-none" />
           
           <div className="flex justify-between items-start">
@@ -359,10 +360,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <span>TRANSCEIVER:</span>
             <span className="text-zinc-400 font-bold">ESP-A28 THERMAL</span>
           </div>
-        </div>
+        </motion.div>
 
         {/* CARD 6: RAIN DETECTION & VENI ACTUATOR (LG: COL-SPAN-3) */}
-        <div className="lg:col-span-3 bg-[#03090f]/75 border border-zinc-900/90 rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between shadow-xl min-h-[180px]">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.3 }} className="lg:col-span-3 bg-[#03090f]/75 border border-zinc-900/90 rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between shadow-xl min-h-[180px]">
           <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/5 rounded-full blur-xl pointer-events-none" />
           
           <div className="flex justify-between items-start">
@@ -389,10 +390,10 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <span>CONTROL MODE:</span>
             <span className="text-emerald-455 font-bold">{roofControlMode.toUpperCase()} DECISION</span>
           </div>
-        </div>
+        </motion.div>
 
         {/* CARD 7: ACTIVE WARNING ALERTS COUNT (LG: COL-SPAN-3) */}
-        <div className="lg:col-span-3 bg-[#03090f]/75 border border-zinc-900/90 rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between shadow-xl min-h-[180px]">
+        <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.35 }} className="lg:col-span-3 bg-[#03090f]/75 border border-zinc-900/90 rounded-2xl p-5 relative overflow-hidden flex flex-col justify-between shadow-xl min-h-[180px]">
           <div className="absolute top-0 right-0 w-24 h-24 bg-rose-500/5 rounded-full blur-xl pointer-events-none" />
           
           <div className="flex justify-between items-start">
@@ -417,7 +418,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
             <span>HEALTH INDEX:</span>
             <span className="text-emerald-400 font-bold">{activeSector.plantHealthIndex}/100</span>
           </div>
-        </div>
+        </motion.div>
 
       </div>
 
