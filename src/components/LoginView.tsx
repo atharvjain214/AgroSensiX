@@ -152,7 +152,13 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccessLogin, onCancel }
       }, 1000);
     } catch (err: any) {
       setIsScanning(false);
-      setErrorText(err.message || "Google authentication failed.");
+      let rawMsg = err.message || "Google authentication failed.";
+      if (rawMsg.includes("popup-closed-by-user")) {
+        rawMsg = "Sign-In popup was closed before completion.";
+      } else if (rawMsg.includes("popup-blocked")) {
+        rawMsg = "Sign-In popup was blocked by browser. Please allow popups for Google Sign-In.";
+      }
+      setErrorText(rawMsg);
     }
   };
 
@@ -276,7 +282,19 @@ export const LoginView: React.FC<LoginViewProps> = ({ onSuccessLogin, onCancel }
     } catch (err: any) {
       handleFailedAttempt();
       setIsScanning(false);
-      setErrorText(err.message || "Authentication failed.");
+      let rawMsg = err.message || "Authentication failed.";
+      if (rawMsg.includes("auth/email-already-in-use")) {
+        rawMsg = "This email is already registered. Please sign in or use password recovery.";
+      } else if (rawMsg.includes("auth/invalid-credential") || rawMsg.includes("auth/wrong-password") || rawMsg.includes("auth/user-not-found")) {
+        rawMsg = "Invalid email or password. Please try again.";
+      } else if (rawMsg.includes("auth/weak-password")) {
+        rawMsg = "Password is too weak. Please use at least 8 characters.";
+      } else if (rawMsg.includes("auth/too-many-requests")) {
+        rawMsg = "Too many failed attempts. Please wait a moment and try again.";
+      } else if (rawMsg.includes("auth/invalid-email")) {
+        rawMsg = "Please enter a valid email address.";
+      }
+      setErrorText(rawMsg);
     }
   };
 
