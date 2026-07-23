@@ -46,7 +46,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
   const [wsStatus, setWsStatus] = useState<"disconnected" | "connecting" | "connected" | "error">("disconnected");
   const [isListening, setIsListening] = useState(false);
   const [spokenTranscript, setSpokenTranscript] = useState("");
-  const [assistantResponse, setAssistantResponse] = useState("Hello! I am your AgroSensiX Voice Co-Pilot. Click the microphone or speak a command like 'Water Greenhouse 14', 'System status', or ask me any question!");
+  const [assistantResponse, setAssistantResponse] = useState("Hello! I am your AgroSensiX Universal Voice Co-Pilot. Click the microphone or speak a command like 'Water Greenhouse 14', 'System status', or ask me ANY question on any topic!");
   const [isProcessing, setIsProcessing] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [voiceEnabled, setVoiceEnabled] = useState(true);
@@ -595,7 +595,7 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
               onClick={() => {
                 stopLiveAPI();
                 setVoiceEngine("browser");
-                setAssistantResponse("Hello! I am your AgroSensiX Voice Co-Pilot. Click the microphone or speak a command like 'Water Greenhouse 14', 'System status', or ask me any question!");
+                setAssistantResponse("Hello! I am your AgroSensiX Universal Voice Co-Pilot. Click the microphone or speak a command like 'Water Greenhouse 14', 'System status', or ask me ANY question on any topic!");
               }}
               className={`px-3 py-1 rounded-md text-[9px] font-mono font-black tracking-tight transition cursor-pointer ${
                 voiceEngine === "browser"

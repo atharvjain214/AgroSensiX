@@ -316,7 +316,21 @@ const getLocalizedOfflineResponse = (prompt: string, langName: string): string =
   const lang = LOCALIZED_OFFLINE_DB[langName] ? langName : "English";
   const db = LOCALIZED_OFFLINE_DB[lang];
 
-  let topic = "hello";
+  // Evaluate arithmetic expressions directly offline (e.g. "5*4", "10 + 20")
+  const mathMatch = p.match(/(?:what\s+is\s+|calculate\s+|calc\s+)?(\d+(?:\.\d+)?\s*[\+\-\*\/\%\^]\s*\d+(?:\.\d+)?(?:\s*[\+\-\*\/\%]\s*\d+(?:\.\d+)?)*)/i);
+  if (mathMatch) {
+    try {
+      const expr = mathMatch[1].replace(/[^0-9\+\-\*\/\%\.\s]/g, "");
+      if (expr && expr.length > 0) {
+        const mathResult = Function(`"use strict"; return (${expr})`)();
+        if (typeof mathResult === "number" && !isNaN(mathResult)) {
+          return `### Math Calculation 🔢\n\n**Expression:** \`${expr}\`\n**Answer:** **${mathResult}**\n\n*(Offline Mode: Evaluated via local arithmetic engine)*`;
+        }
+      }
+    } catch (e) {}
+  }
+
+  let topic = "";
   if (p.includes("water") || p.includes("irrigate") || p.includes("pump") || p.includes("watering") || p.includes("පාਣੀ") || p.includes("पानी") || p.includes("ਪਾਣੀ") || p.includes("நீர்") || p.includes("जल") || p.includes("సేచ")) {
     topic = "watering";
   } else if (p.includes("soil") || p.includes("moisture") || p.includes("sensor") || p.includes("humidity") || p.includes("નમી") || p.includes("נਮੀ") || p.includes("നമി") || p.includes("नमी")) {
@@ -331,12 +345,18 @@ const getLocalizedOfflineResponse = (prompt: string, langName: string): string =
     topic = "trouble";
   } else if (p.includes("faq") || p.includes("question") || p.includes("offline")) {
     topic = "faq";
+  } else if (p.includes("hello") || p.includes("hi") || p.includes("namaste") || p.includes("hey") || p.includes("help") || p.includes("who are you")) {
+    topic = "hello";
   }
 
-  // Retrieve matching topic content, fallback to default 'hello' or moisture if needed
-  let content = db[topic];
+  // Retrieve matching topic content, or general offline fallback
+  let content = topic ? db[topic] : null;
   if (!content) {
-    content = db["hello"] || LOCALIZED_OFFLINE_DB["English"][topic] || LOCALIZED_OFFLINE_DB["English"]["hello"];
+    if (topic === "hello") {
+      content = db["hello"] || LOCALIZED_OFFLINE_DB["English"]["hello"];
+    } else {
+      content = `### Universal AI Assistant 🤖🌐\n\nI received your query: **"${prompt}"**.\n\n*(Connect to the internet/cloud server to receive real-time Gemini AI answers for general knowledge, coding, mathematics, science, literature, or farm telemetry!)*`;
+    }
   }
 
   // Append a helpful offline translation assurance notice matching the response language exactly
@@ -615,7 +635,7 @@ All other telemetry sectors (including solar grids, pumps, and temperature senso
       {
         id: "init-msg",
         role: "assistant",
-        content: "### Welcome to the AgroSensiX Farm Assistant\n\nI am your **AI Farming Assistant with Gemini**. I have real-time information for **Greenhouse 14 (Mixed Crops)** and **Orchard Hub 7 (Dwarf Oranges)** ready to assist you.\n\nAsk me about watering schedules, crop disease warnings, or how to get the best results from your harvest!",
+        content: "### Welcome to AgroSensiX Universal AI Assistant 🤖🌐\n\nI am your **Universal AI Assistant powered by Gemini**. I am ready to answer **ANY question on ANY topic**—including general knowledge, mathematics (e.g. 5*4), science, history, coding, literature, or real-time telemetry for **Greenhouse 14 (Mixed Crops)** and **Orchard Hub 7 (Dwarf Oranges)**.\n\nAsk me anything you'd like to know!",
         timestamp: new Date(),
         detectedLanguage: "English"
       }
@@ -1800,7 +1820,7 @@ All other telemetry sectors (including solar grids, pumps, and temperature senso
                   onChange={(e) => setInputValue(e.target.value)}
                   placeholder={
                     isRecording 
-                      ? "Listening... Speak your crop query clearly now" 
+                      ? "Listening... Speak any question clearly now" 
                       : !speechRecognitionSupported 
                         ? `Iframe Mic locked. Please type your query in ${selectedSettingLang}...` 
                         : `Ask in your native language (English, Hindi, Punjabi, Tamil...)`
