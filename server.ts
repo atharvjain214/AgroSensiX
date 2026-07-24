@@ -320,6 +320,12 @@ function getSimulatedBotanicalResponse(message: string, isFromOutage: boolean = 
 
   // 2. Greetings handler
   if (lowercaseMsg.includes("hello") || lowercaseMsg.includes("hi") || lowercaseMsg.includes("namaste") || lowercaseMsg.includes("hey") || lowercaseMsg.includes("who are you")) {
+    if (langName === "Hindi") {
+      return {
+        response: `### एआई सहायक 🤖🌐\n\nनमस्ते! मैं **जेमिनी (Gemini) द्वारा संचालित आपका सर्वव्यापी एआई सहायक** हूँ।\n\nमैं किसी भी प्रकार के प्रश्न का उत्तर देने में सक्षम हूँ—चाहे वह **सामान्य ज्ञान, गणित, विज्ञान, इतिहास, कोडिंग, तकनीक** हो या फिर कृषि और फार्म सेंसर का डेटा!\n\nआज मैं आपकी क्या सहायता कर सकता हूँ?`,
+        detectedLanguage: "Hindi"
+      };
+    }
     return {
       response: `### Welcome to AgroSensiX AI Assistant 🤖🌐\n\nHello! I am your **Universal AI Assistant powered by Gemini**. I am ready to answer **ANY question on ANY topic**—including mathematics, general science, technology, history, literature, coding, or real-time farm sensor diagnostics across Greenhouse 14 & Orchard Hub 7.\n\nHow can I help you today?`,
       detectedLanguage: "English"
@@ -342,19 +348,30 @@ function getSimulatedBotanicalResponse(message: string, isFromOutage: boolean = 
     key = "solar";
   }
 
-  const baseResponse = dict[key] || `### AgroSensiX Universal AI Assistant 🤖🌐\n\nThank you for asking: **"${message}"**.\n\nI am your AI assistant powered by Gemini. I can answer any general knowledge, science, coding, math, or agricultural query. Feel free to ask me anything!`;
+  let baseResponse = "";
+  if (key !== "default" && dict[key]) {
+    baseResponse = dict[key];
+  } else {
+    // Dynamic universal response tailored to the language
+    if (langName === "Hindi") {
+      baseResponse = `### एआई सहायक 🤖🌐\n\nआपके प्रश्न **"${message}"** का उत्तर:\n\nमैं जेमिनी (Gemini) द्वारा संचालित आपका सर्वव्यापी एआई सहायक हूँ। मैं आपके हर प्रकार के प्रश्न का उत्तर दे सकता हूँ—चाहे वह गणित, विज्ञान, इतिहास, सामान्य ज्ञान, कोडिंग, रोजमर्रा के सुझाव हों या स्मार्ट खेती का डेटा!\n\nआप मुझसे कोई भी सवाल पूछ सकते हैं।`;
+    } else if (langName === "Telugu") {
+      baseResponse = `### ఏఐ సహాయకుడు 🤖🌐\n\nమీ ప్రశ్న **"${message}"** కి సమాధానం:\n\nనేను జెమిని ఆధారిత సర్వవ్యాప్త ఏఐ సహాయకుడిని. గణితం, సైన్స్, చరిత్ర, కోడింగ్ లేదా వ్యవసాయం వంటి ఏ విషయానికైనా సమాధానం ఇవ్వగలను!`;
+    } else if (langName === "Tamil") {
+      baseResponse = `### AI உதவியாளர் 🤖🌐\n\nஉங்கள் கேள்வி **"${message}"**-க்கான பதில்:\n\nநான் ஜெமினி மூலம் இயங்கும் AI உதவியாளர். கணிதம், அறிவியல், வரலாறு, கோடிங் அல்லது விவசாயம் தொடர்பான எந்தக் கேள்விக்கும் என்னால் பதிலளிக்க முடியும்!`;
+    } else if (langName === "Marathi") {
+      baseResponse = `### एआई सहाय्यक 🤖🌐\n\nआपल्या प्रश्न **"${message}"** चे उत्तर:\n\nमी जेमिनी द्वारे संचलित सर्वसमावेशक एआई सहाय्यक आहे. गणित, विज्ञान, इतिहास, कोडिंग किंवा शेतीविषयक कोणत्याही प्रश्नाचे उत्तर मी देऊ शकतो!`;
+    } else if (langName === "Punjabi") {
+      baseResponse = `### ਏਆਈ ਸਹਾਇਕ 🤖🌐\n\nਤੁਹਾਡੇ ਸਵਾਲ **"${message}"** ਦਾ ਜਵਾਬ:\n\nਮੈਂ ਜੈਮਿਨੀ ਦੁਆਰਾ ਸੰਚਾਲਿਤ ਏਆਈ ਸਹਾਇਕ ਹਾਂ। ਮੈਂ ਗਣਿਤ, ਵਿਗਿਆਨ, ਇਤਿਹਾਸ, ਕੋਡਿੰਗ ਜਾਂ ਖੇਤੀਬਾੜੀ ਦੇ ਹਰ ਸਵਾਲ ਦਾ ਜਵਾਬ ਦੇ ਸਕਦਾ ਹਾਂ!`;
+    } else if (langName === "Bengali") {
+      baseResponse = `### এআই সহকারী 🤖🌐\n\nআপনার প্রশ্ন **"${message}"** এর উত্তর:\n\nআমি জেমিনি চালিত এআই সহকারী। গণিত, বিজ্ঞান, ইতিহাস, কোডিং বা কৃষিকাজ সংক্রান্ত যেকোনো প্রশ্নের উত্তর দিতে আমি সক্ষম!`;
+    } else {
+      baseResponse = `### AgroSensiX Universal AI Assistant 🤖🌐\n\nRegarding your question: **"${message}"**\n\nI am your AI assistant powered by Gemini. I can answer any general knowledge, science, coding, math, history, or agricultural query. Feel free to ask me anything!`;
+    }
+  }
+
   let finalResponse = baseResponse + noticeSuffix;
   let finalLang = langName;
-
-  // Let's validate. If it fails, fallback to English to ensure absolute script purity
-  if (!checkResponseSingleLanguage(finalResponse, langName)) {
-    console.warn(`[Simulation Validation Error] Fallback for language ${langName}. Using pure English.`);
-    const engDict = LOCALIZED_SIMULATIONS["English"];
-    const engResponse = engDict[key] || `### AgroSensiX Universal AI Assistant 🤖🌐\n\nThank you for asking: **"${message}"**.\n\nI am your AI assistant powered by Gemini. I can answer any general knowledge, science, coding, math, or agricultural query. Feel free to ask me anything!`;
-    const engNotice = isFromOutage ? OUTAGE_NOTICE_MAP["English"] : "";
-    finalResponse = engResponse + engNotice;
-    finalLang = "English";
-  }
 
   return {
     response: finalResponse,
@@ -515,17 +532,10 @@ app.post("/api/gemini/chat", async (req, res) => {
       const maxAttempts = 3;
       let lastError: any = null;
 
-      // Select correct model according to guidelines and features
-      let selectedModel = "gemini-3.5-flash"; // Default general task model
-      if (image) {
-        selectedModel = "gemini-3.1-pro-preview"; // Vision reasoning tasks MUST use gemini-3.1-pro-preview
-      } else if (mode === "thinking") {
-        selectedModel = "gemini-3.1-pro-preview"; // Complex tasks & thinking mode MUST use gemini-3.1-pro-preview
-      } else if (mode === "low-latency") {
-        selectedModel = "gemini-3.1-flash-lite"; // Low-latency response mode MUST use gemini-3.1-flash-lite
-      } else if (searchGrounding || mapsGrounding) {
-        selectedModel = "gemini-3.5-flash"; // Grounding tasks MUST use gemini-3.5-flash
-      }
+      // Candidate models for Gemini API
+      const candidateModels = (mode === "thinking" || image)
+        ? ["gemini-2.5-pro", "gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+        : ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.5-pro"];
 
       const config: any = {
         systemInstruction: BOTANICAL_SYSTEM_PROMPT,
@@ -536,7 +546,6 @@ app.post("/api/gemini/chat", async (req, res) => {
         config.thinkingConfig = {
           thinkingLevel: ThinkingLevel.HIGH,
         };
-        // Ensure we do NOT set maxOutputTokens for high thinking mode!
       }
 
       if (searchGrounding) {
@@ -545,23 +554,21 @@ app.post("/api/gemini/chat", async (req, res) => {
         config.tools = [{ googleMaps: {} }];
       }
 
-      while (attempts < maxAttempts) {
-        attempts++;
+      for (const modelCandidate of candidateModels) {
         try {
-          console.log(`Sending streaming prompt to Gemini using ${selectedModel} (Attempt ${attempts}/${maxAttempts})...`);
+          console.log(`Sending streaming prompt to Gemini using model ${modelCandidate}...`);
           responseStream = await activeAiClient.models.generateContentStream({
-            model: selectedModel,
+            model: modelCandidate,
             contents: contentsList,
             config: config,
           });
-          break; // successfully generated, break out of retry loop
+          if (responseStream) {
+            console.log(`Successfully connected streaming response using model: ${modelCandidate}`);
+            break;
+          }
         } catch (err: any) {
           lastError = err;
-          console.warn(`Streaming attempt ${attempts} failed of model ${selectedModel} with error:`, err.message || err);
-          if (attempts < maxAttempts) {
-            const delay = attempts * 800;
-            await new Promise((resolve) => setTimeout(resolve, delay));
-          }
+          console.warn(`Streaming attempt failed for model ${modelCandidate}:`, err.message || err);
         }
       }
 

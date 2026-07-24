@@ -354,8 +354,20 @@ const getLocalizedOfflineResponse = (prompt: string, langName: string): string =
   if (!content) {
     if (topic === "hello") {
       content = db["hello"] || LOCALIZED_OFFLINE_DB["English"]["hello"];
+    } else if (langName === "Hindi") {
+      content = `### एआई सहायक 🤖🌐\n\nआपके प्रश्न **"${prompt}"** का उत्तर:\n\nमैं जेमिनी (Gemini) द्वारा संचालित आपका सर्वव्यापी एआई सहायक हूँ। मैं आपके किसी भी प्रश्न का उत्तर दे सकता हूँ—चाहे वह गणित, विज्ञान, इतिहास, कोडिंग, या कृषि-तकनीक से संबंधित हो!`;
+    } else if (langName === "Telugu") {
+      content = `### ఏఐ సహాయకుడు 🤖🌐\n\nమీ ప్రశ్న **"${prompt}"** కి సమాధానం:\n\nనేను జెమిని ఆధారిత ఏఐ సహాయకుడిని. గణితం, సైన్స్, చరిత్ర లేదా వ్యవసాయం వంటి ప్రతీ ప్రశ్నకు సమాధానం ఇవ్వగలను!`;
+    } else if (langName === "Tamil") {
+      content = `### AI உதவியாளர் 🤖🌐\n\nஉங்கள் கேள்வி **"${prompt}"**-க்கான பதில்:\n\nநான் ஜெமினி AI உதவியாளர். கணிதம், அறிவியல், வரலாறு அல்லது விவசாயம் தொடர்பான எந்தக் கேள்விக்கும் என்னால் பதிலளிக்க முடியும்!`;
+    } else if (langName === "Marathi") {
+      content = `### एआई सहाय्यक 🤖🌐\n\nआपल्या प्रश्न **"${prompt}"** चे उत्तर:\n\nमी जेमिनी एआई सहाय्यक आहे. कोणत्याही प्रश्नाचे उत्तर मी देऊ शकतो!`;
+    } else if (langName === "Punjabi") {
+      content = `### ਏਆਈ ਸਹਾਇਕ 🤖🌐\n\nਤੁਹਾਡੇ ਸਵਾਲ **"${prompt}"** ਦਾ ਜਵਾਬ:\n\nਮੈਂ ਜੈਮਿਨੀ ਏਆਈ ਸਹਾਇਕ ਹਾਂ। ਤੁਹਾਡੇ ਹਰ ਸਵਾਲ ਦਾ ਜਵਾਬ ਦੇ ਸਕਦਾ ਹਾਂ!`;
+    } else if (langName === "Bengali") {
+      content = `### এআই সহকারী 🤖🌐\n\nআপনার প্রশ্ন **"${prompt}"** এর উত্তর:\n\nআমি জেমিনি এআই সহকারী। যেকোনো প্রশ্নের উত্তর দিতে সক্ষম!`;
     } else {
-      content = `### Universal AI Assistant 🤖🌐\n\nI received your query: **"${prompt}"**.\n\nI am your AI Assistant powered by Gemini. Ask me anything—from general knowledge, math, science, history, coding, or real-time farm telemetry!`;
+      content = `### Universal AI Assistant 🤖🌐\n\nRegarding your query: **"${prompt}"**.\n\nI am your AI Assistant powered by Gemini. Ask me anything—from general knowledge, math, science, history, coding, or real-time farm telemetry!`;
     }
   }
 
