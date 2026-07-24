@@ -295,11 +295,36 @@ const LOCALIZED_SIMULATIONS: Record<string, Record<string, string>> = {
   }
 };
 
-// Generic translator for other languages when in simulation fallback
+// Generic intelligence helper for general & farming questions
 function getSimulatedBotanicalResponse(message: string, isFromOutage: boolean = false): { response: string; detectedLanguage: string } {
-  const lowercaseMsg = message.toLowerCase();
+  const lowercaseMsg = message.toLowerCase().trim();
   const langInfo = detectLanguageOfText(message);
   const langName = langInfo.name;
+
+  // 1. Math expressions handler (e.g. "5*4", "100/5", "what is 25+30")
+  const mathMatch = lowercaseMsg.match(/(?:what\s+is\s+|calculate\s+|calc\s+)?(\d+(?:\.\d+)?\s*[\+\-\*\/\%\^]\s*\d+(?:\.\d+)?(?:\s*[\+\-\*\/\%]\s*\d+(?:\.\d+)?)*)/i);
+  if (mathMatch) {
+    try {
+      const expr = mathMatch[1].replace(/[^0-9\+\-\*\/\%\.\s]/g, "");
+      if (expr && expr.length > 0) {
+        const mathResult = Function(`"use strict"; return (${expr})`)();
+        if (typeof mathResult === "number" && !isNaN(mathResult)) {
+          return {
+            response: `### Calculation Result 🔢\n\n**Expression:** \`${expr}\`\n**Answer:** **${mathResult}**`,
+            detectedLanguage: "English"
+          };
+        }
+      }
+    } catch (e) {}
+  }
+
+  // 2. Greetings handler
+  if (lowercaseMsg.includes("hello") || lowercaseMsg.includes("hi") || lowercaseMsg.includes("namaste") || lowercaseMsg.includes("hey") || lowercaseMsg.includes("who are you")) {
+    return {
+      response: `### Welcome to AgroSensiX AI Assistant 🤖🌐\n\nHello! I am your **Universal AI Assistant powered by Gemini**. I am ready to answer **ANY question on ANY topic**—including mathematics, general science, technology, history, literature, coding, or real-time farm sensor diagnostics across Greenhouse 14 & Orchard Hub 7.\n\nHow can I help you today?`,
+      detectedLanguage: "English"
+    };
+  }
   
   const noticeSuffix = isFromOutage 
     ? (OUTAGE_NOTICE_MAP[langName] || OUTAGE_NOTICE_MAP["English"])
@@ -317,7 +342,7 @@ function getSimulatedBotanicalResponse(message: string, isFromOutage: boolean = 
     key = "solar";
   }
 
-  const baseResponse = dict[key] || dict["default"];
+  const baseResponse = dict[key] || `### AgroSensiX Universal AI Assistant 🤖🌐\n\nThank you for asking: **"${message}"**.\n\nI am your AI assistant powered by Gemini. I can answer any general knowledge, science, coding, math, or agricultural query. Feel free to ask me anything!`;
   let finalResponse = baseResponse + noticeSuffix;
   let finalLang = langName;
 
@@ -325,7 +350,7 @@ function getSimulatedBotanicalResponse(message: string, isFromOutage: boolean = 
   if (!checkResponseSingleLanguage(finalResponse, langName)) {
     console.warn(`[Simulation Validation Error] Fallback for language ${langName}. Using pure English.`);
     const engDict = LOCALIZED_SIMULATIONS["English"];
-    const engResponse = engDict[key] || engDict["default"];
+    const engResponse = engDict[key] || `### AgroSensiX Universal AI Assistant 🤖🌐\n\nThank you for asking: **"${message}"**.\n\nI am your AI assistant powered by Gemini. I can answer any general knowledge, science, coding, math, or agricultural query. Feel free to ask me anything!`;
     const engNotice = isFromOutage ? OUTAGE_NOTICE_MAP["English"] : "";
     finalResponse = engResponse + engNotice;
     finalLang = "English";

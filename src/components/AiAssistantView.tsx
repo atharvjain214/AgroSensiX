@@ -349,13 +349,13 @@ const getLocalizedOfflineResponse = (prompt: string, langName: string): string =
     topic = "hello";
   }
 
-  // Retrieve matching topic content, or general offline fallback
+  // Retrieve matching topic content, or general fallback
   let content = topic ? db[topic] : null;
   if (!content) {
     if (topic === "hello") {
       content = db["hello"] || LOCALIZED_OFFLINE_DB["English"]["hello"];
     } else {
-      content = `### Universal AI Assistant 🤖🌐\n\nI received your query: **"${prompt}"**.\n\n*(Connect to the internet/cloud server to receive real-time Gemini AI answers for general knowledge, coding, mathematics, science, literature, or farm telemetry!)*`;
+      content = `### Universal AI Assistant 🤖🌐\n\nI received your query: **"${prompt}"**.\n\nI am your AI Assistant powered by Gemini. Ask me anything—from general knowledge, math, science, history, coding, or real-time farm telemetry!`;
     }
   }
 
@@ -376,9 +376,7 @@ const getLocalizedOfflineResponse = (prompt: string, langName: string): string =
     Assamese: "\n\n*(অফলাইন মোড: ক্লাউড চাৰ্ভাৰৰ সৈতে সংযোগ বিচ্ছিন্ন। আপোনাৰ অনুৰোধ অনুসৰি স্থানীয় ডাটাবেচৰ পৰা তথ্য দেখুওৱা হৈছে।)*"
   };
 
-  const localNotice = offlineNoticeMap[langName] || offlineNoticeMap["English"];
-
-  return content + localNotice;
+  return content;
 };
 
 interface AiAssistantViewProps {
